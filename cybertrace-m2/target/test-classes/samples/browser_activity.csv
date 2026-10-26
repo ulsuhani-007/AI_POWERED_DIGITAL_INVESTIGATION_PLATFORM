@@ -1,0 +1,5 @@
+timestamp,user,url,device
+2026-10-26T10:33:00,user1,https://internal-portal.company.com/dashboard,device1
+2026-10-26 10:34:00,user1,https://external-file-sharing.io/download?id=992,device1
+26/10/2026 10:36:20,admin,https://admin.cloud-console.aws.com/iam,server-dc
+2026-10-26T10:37:00.500,user2,https://malicious-c2-beacon.ru/gate.php,device2

@@ -1,0 +1,10 @@
+com\cybertrace\m2\CyberTraceM2IntegrationTest.class
+com\cybertrace\m2\parser\LoginEvidenceParserTest.class
+com\cybertrace\m2\parser\FileAccessEvidenceParserTest.class
+com\cybertrace\m2\parser\NetworkEventsEvidenceParserTest.class
+com\cybertrace\m2\util\TimestampParserTest.class
+com\cybertrace\m2\parser\BrowserActivityEvidenceParserTest.class
+com\cybertrace\m2\service\TimelineServiceTest.class
+com\cybertrace\m2\controller\EvidenceControllerTest.class
+com\cybertrace\m2\service\EvidenceProcessingServiceTest.class
+com\cybertrace\m2\parser\EvidenceFileTypeDetectorTest.class
