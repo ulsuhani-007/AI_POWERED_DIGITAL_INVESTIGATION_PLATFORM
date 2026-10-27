@@ -1,5 +1,0 @@
-timestamp,user,fileName,action,device
-2026-10-26T10:32:30,user1,C:\Confidential\financial_q3.xlsx,READ,device1
-2026-10-26 10:33:45,user1,C:\Confidential\financial_q3.xlsx,COPY,device1
-26/10/2026 10:35:10,user2,D:\Database\dump.sql,EXPORT,device2
-2026-10-26T10:38:00.750,admin,C:\Windows\System32\cmd.exe,EXECUTE,server-dc

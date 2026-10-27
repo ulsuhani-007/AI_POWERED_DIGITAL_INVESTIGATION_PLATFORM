@@ -1,7 +1,0 @@
-timestamp,user,ipAddress,device,status
-2026-10-26T10:30:00,user1,192.168.1.10,device1,SUCCESS
-26-99-2026 10:00:00,user2,10.0.0.5,device2,FAILED
-
-,user3,10.0.0.6,device3,SUCCESS
-2026-10-26T10:30:00,user1,192.168.1.10,device1,SUCCESS
-2026-10-26T10:45:00,user4,192.168.1.50,device4,SUCCESS

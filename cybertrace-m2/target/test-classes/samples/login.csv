@@ -1,5 +1,0 @@
-timestamp,user,ipAddress,device,status
-2026-10-26T10:30:00,user1,192.168.1.10,device1,SUCCESS
-2026-10-26 10:31:15,user2,10.0.0.5,device2,FAILED
-26/10/2026 10:32:00,admin,172.16.0.2,server-dc,SUCCESS
-2026-10-26T10:35:00.123,attacker,198.51.100.42,unknown-client,FAILED
