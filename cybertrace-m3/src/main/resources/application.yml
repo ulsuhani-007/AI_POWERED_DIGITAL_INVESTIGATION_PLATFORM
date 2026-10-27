@@ -1,0 +1,27 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: cybertrace-m3-analysis-engine
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+cybertrace:
+  m3:
+    brute-force:
+      threshold: 5
+      time-window-minutes: 5
+    network-volume:
+      threshold-z: 3.5
+      min-sample-size: 3
+    off-hours:
+      start-hour: 9
+      end-hour: 18
+    machine-learning:
+      score-threshold: 0.65
+      num-trees: 100
+      subsample: 0.7
+      random-seed: 42
+      min-batch-size: 5
