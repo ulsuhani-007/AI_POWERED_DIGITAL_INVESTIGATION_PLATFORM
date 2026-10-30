@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane fx:id="overlayPane" stylesheets="@../css/theme.css"
+           xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.investigation.controller.EvidenceController">
+
+    <VBox spacing="14.0" style="-fx-padding: 20px;">
+
+        <!-- Header -->
+        <HBox alignment="CENTER_LEFT" spacing="12.0">
+            <VBox spacing="2.0">
+                <Label text="DIGITAL EVIDENCE ARTIFACTS" styleClass="section-title" style="-fx-font-size: 18px;"/>
+                <Label fx:id="activeCaseHeaderLabel" text="ACTIVE CASE EVIDENCE ARCHIVE" styleClass="section-subtitle" style="-fx-text-fill: #00F0FF; -fx-font-weight: bold;"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="🔄 Refresh Evidence" onAction="#refreshData" styleClass="btn-secondary"/>
+        </HBox>
+
+        <!-- Upload CSV Evidence Form Card -->
+        <VBox spacing="10.0" styleClass="cyber-card-highlight">
+            <HBox alignment="CENTER_LEFT" spacing="8.0">
+                <Label text="📥 INGEST NEW EVIDENCE (CSV / PCAP / LOGS)" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #38BDF8;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label text="Route: POST /api/cases/{id}/evidence" style="-fx-font-size: 10px; -fx-text-fill: #64748B; -fx-font-family: monospace;"/>
+            </HBox>
+
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <Button fx:id="selectFileButton" text="📁 Browse CSV File..." onAction="#onSelectFile" styleClass="btn-secondary"/>
+                <TextField fx:id="selectedFilePathField" promptText="No CSV evidence file selected..." editable="false" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="descriptionField" promptText="Evidence source note or collector tag..." prefWidth="280.0"/>
+                <Button fx:id="uploadButton" text="⬆️ Ingest &amp; Process" onAction="#onUploadEvidence" styleClass="btn-primary" disable="true"/>
+            </HBox>
+
+            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                <ProgressBar fx:id="uploadProgressBar" prefWidth="300.0" progress="0.0" visible="false"/>
+                <Label fx:id="uploadStatusLabel" text="Select a CSV evidence file to initiate ingestion." style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+            </HBox>
+        </VBox>
+
+        <!-- Main Split: Evidence Table (Left) + Detail Panel (Right) -->
+        <SplitPane dividerPositions="0.68" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+
+            <!-- Table -->
+            <VBox spacing="8.0" styleClass="cyber-card">
+                <TableView fx:id="evidenceTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colFileName" text="FILE NAME" prefWidth="220.0"/>
+                        <TableColumn fx:id="colType" text="EVIDENCE TYPE" prefWidth="130.0"/>
+                        <TableColumn fx:id="colSize" text="FILE SIZE" prefWidth="90.0"/>
+                        <TableColumn fx:id="colDate" text="UPLOADED" prefWidth="90.0"/>
+                        <TableColumn fx:id="colStatus" text="STATUS" prefWidth="95.0"/>
+                        <TableColumn fx:id="colEvents" text="EVENTS" prefWidth="75.0"/>
+                        <TableColumn fx:id="colHash" text="SHA-256 HASH" prefWidth="140.0"/>
+                    </columns>
+                    <placeholder>
+                        <Label text="No evidence artifacts ingested for this case."/>
+                    </placeholder>
+                </TableView>
+            </VBox>
+
+            <!-- Evidence Detail Panel -->
+            <VBox fx:id="detailsBox" spacing="12.0" styleClass="cyber-card" style="-fx-background-color: #0D1424;">
+                <Label text="EVIDENCE METADATA" styleClass="stat-label"/>
+                <Label fx:id="detailFileName" text="No Evidence Selected" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #38BDF8;" wrapText="true"/>
+
+                <Separator/>
+
+                <VBox spacing="8.0" style="-fx-background-color: #090E1A; -fx-padding: 12px; -fx-background-radius: 6px;">
+                    <HBox spacing="8.0">
+                        <Label text="Ingest Status:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 90px;"/>
+                        <Label fx:id="detailStatus" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC; -fx-font-weight: bold;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="File Size:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 90px;"/>
+                        <Label fx:id="detailSize" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Upload Time:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 90px;"/>
+                        <Label fx:id="detailDate" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Log Source:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 90px;"/>
+                        <Label fx:id="detailSource" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                </VBox>
+
+                <VBox spacing="4.0">
+                    <Label text="SHA-256 INTEGRITY HASH" styleClass="stat-label"/>
+                    <Label fx:id="detailHash" text="--" style="-fx-font-size: 10px; -fx-font-family: monospace; -fx-text-fill: #00F0FF;" wrapText="true"/>
+                </VBox>
+
+                <VBox spacing="4.0">
+                    <Label text="NOTES / CHAIN OF CUSTODY" styleClass="stat-label"/>
+                    <Label fx:id="detailDescription" text="--" style="-fx-font-size: 11px; -fx-text-fill: #94A3B8;" wrapText="true"/>
+                </VBox>
+
+                <Region VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+        </SplitPane>
+
+    </VBox>
+
+</StackPane>

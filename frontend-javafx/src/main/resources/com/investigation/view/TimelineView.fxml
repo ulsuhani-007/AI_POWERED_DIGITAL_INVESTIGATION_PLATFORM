@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane fx:id="overlayPane" stylesheets="@../css/theme.css"
+           xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.investigation.controller.TimelineController">
+
+    <VBox spacing="14.0" style="-fx-padding: 20px;">
+
+        <!-- Header -->
+        <HBox alignment="CENTER_LEFT" spacing="12.0">
+            <VBox spacing="2.0">
+                <Label text="CHRONOLOGICAL FORENSIC TIMELINE" styleClass="section-title" style="-fx-font-size: 18px;"/>
+                <Label fx:id="activeCaseHeaderLabel" text="NORMALIZED FORENSIC EVENTS" styleClass="section-subtitle" style="-fx-text-fill: #00F0FF; -fx-font-weight: bold;"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="🔄 Refresh Timeline" onAction="#refreshData" styleClass="btn-secondary"/>
+        </HBox>
+
+        <!-- Search and Filter Bar -->
+        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="cyber-card" style="-fx-padding: 10px 14px;">
+            <Label text="🔍" style="-fx-text-fill: #38BDF8;"/>
+            <TextField fx:id="searchField" promptText="Filter timeline by description, user, IP, device, event ID..." HBox.hgrow="ALWAYS"/>
+
+            <Label text="Event Category:" style="-fx-font-size: 11px; -fx-text-fill: #94A3B8; -fx-font-weight: bold;"/>
+            <ComboBox fx:id="eventTypeComboBox" prefWidth="180.0"/>
+
+            <ToggleButton fx:id="sortOrderToggle" text="⏱️ Newest First" selected="true" styleClass="btn-secondary"/>
+
+            <Label fx:id="eventCountLabel" text="Showing 0 events" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+        </HBox>
+
+        <!-- Split View: Timeline Feed (Left) & Event Details (Right) -->
+        <SplitPane dividerPositions="0.65" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+
+            <!-- Timeline Cards List -->
+            <VBox spacing="8.0" styleClass="cyber-card">
+                <ListView fx:id="eventsListView" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;"/>
+            </VBox>
+
+            <!-- Event Details Panel -->
+            <VBox fx:id="detailPanel" spacing="12.0" styleClass="cyber-card" style="-fx-background-color: #0D1424;">
+                <HBox alignment="CENTER_LEFT" spacing="8.0">
+                    <Label text="EVENT INSPECTOR" styleClass="stat-label"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="detailEventId" text="evt-xxxx" style="-fx-font-size: 10px; -fx-font-family: monospace; -fx-text-fill: #64748B;"/>
+                </HBox>
+
+                <Label fx:id="detailEventType" text="EVENT_TYPE" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #00F0FF;"/>
+                <Label fx:id="detailTimestamp" text="YYYY-MM-DD HH:mm:ss UTC" style="-fx-font-size: 11px; -fx-text-fill: #38BDF8; -fx-font-weight: bold;"/>
+
+                <Separator/>
+
+                <VBox spacing="8.0" style="-fx-background-color: #090E1A; -fx-padding: 12px; -fx-background-radius: 6px;">
+                    <HBox spacing="8.0">
+                        <Label text="User Principal:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailUser" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC; -fx-font-weight: bold;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Host Endpoint:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailDevice" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="IP Address:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailIp" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Exec Status:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailSuccess" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC; -fx-font-weight: bold;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Bytes:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailBytes" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Source Evidence:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailEvidenceId" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                </VBox>
+
+                <VBox spacing="4.0" VBox.vgrow="ALWAYS">
+                    <Label text="NORMALIZED RECORD PAYLOAD" styleClass="stat-label"/>
+                    <TextArea fx:id="detailDescriptionArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"
+                              style="-fx-font-family: 'Consolas', monospace; -fx-font-size: 11px;"/>
+                </VBox>
+            </VBox>
+
+        </SplitPane>
+
+    </VBox>
+
+</StackPane>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane fx:id="overlayPane" stylesheets="@../css/theme.css"
+           xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.investigation.controller.CasesController">
+
+    <VBox spacing="14.0" style="-fx-padding: 20px;">
+
+        <!-- Top Title & Controls Header -->
+        <HBox alignment="CENTER_LEFT" spacing="12.0">
+            <VBox spacing="2.0">
+                <Label text="INVESTIGATION CASES MANAGEMENT" styleClass="section-title" style="-fx-font-size: 18px;"/>
+                <Label text="Register, inspect, and update active forensic case files (REST: /api/cases)." styleClass="section-subtitle"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="+ New Case" onAction="#onNewCase" styleClass="btn-primary"/>
+            <Button text="🔄 Refresh" onAction="#refreshData" styleClass="btn-secondary"/>
+        </HBox>
+
+        <!-- Search and Filter Bar -->
+        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="cyber-card" style="-fx-padding: 10px 14px;">
+            <Label text="🔍" style="-fx-text-fill: #38BDF8;"/>
+            <TextField fx:id="searchField" promptText="Search cases by ID, title, description, investigator..." HBox.hgrow="ALWAYS"/>
+            <Label text="Status Filter:" style="-fx-font-size: 11px; -fx-text-fill: #94A3B8; -fx-font-weight: bold;"/>
+            <ComboBox fx:id="statusFilterComboBox" prefWidth="130.0"/>
+        </HBox>
+
+        <!-- Main Split: Case Table (Left) + Detail Panel (Right) -->
+        <SplitPane dividerPositions="0.68" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+
+            <!-- Table Section -->
+            <VBox spacing="8.0" styleClass="cyber-card">
+                <TableView fx:id="casesTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colCaseNum" text="CASE #" prefWidth="120.0"/>
+                        <TableColumn fx:id="colTitle" text="TITLE / SCOPE" prefWidth="230.0"/>
+                        <TableColumn fx:id="colStatus" text="STATUS" prefWidth="95.0"/>
+                        <TableColumn fx:id="colPriority" text="PRIORITY" prefWidth="85.0"/>
+                        <TableColumn fx:id="colInvestigator" text="LEAD INVESTIGATOR" prefWidth="140.0"/>
+                        <TableColumn fx:id="colEvidence" text="EVIDENCE" prefWidth="75.0"/>
+                        <TableColumn fx:id="colEvents" text="EVENTS" prefWidth="75.0"/>
+                        <TableColumn fx:id="colCreated" text="DATE" prefWidth="90.0"/>
+                    </columns>
+                    <placeholder>
+                        <Label text="No cases found matching criteria."/>
+                    </placeholder>
+                </TableView>
+            </VBox>
+
+            <!-- Case Detail Panel -->
+            <VBox fx:id="detailPanel" spacing="12.0" styleClass="cyber-card" style="-fx-background-color: #0D1424;">
+                <HBox alignment="CENTER_LEFT" spacing="8.0">
+                    <Label fx:id="detailCaseNumber" text="CASE-XXXX" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #00F0FF;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <HBox fx:id="detailBadges" spacing="6.0"/>
+                </HBox>
+
+                <Label fx:id="detailTitle" text="Case Title" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #F8FAFC;" wrapText="true"/>
+
+                <Separator/>
+
+                <VBox spacing="4.0">
+                    <Label text="CASE DESCRIPTION" styleClass="stat-label"/>
+                    <Label fx:id="detailDescription" text="Description..." style="-fx-font-size: 12px; -fx-text-fill: #94A3B8;" wrapText="true"/>
+                </VBox>
+
+                <VBox spacing="6.0" style="-fx-background-color: #090E1A; -fx-padding: 10px; -fx-background-radius: 6px;">
+                    <HBox spacing="8.0">
+                        <Label text="Lead Investigator:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 100px;"/>
+                        <Label fx:id="detailInvestigator" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC; -fx-font-weight: bold;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Created At:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 100px;"/>
+                        <Label fx:id="detailCreated" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Last Modified:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 100px;"/>
+                        <Label fx:id="detailUpdated" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                </VBox>
+
+                <Region VBox.vgrow="ALWAYS"/>
+
+                <!-- Actions Button Bar -->
+                <VBox spacing="8.0">
+                    <Button fx:id="setActiveButton" text="⭐ Set as Active Workstation Focus" onAction="#onSetActiveCase" maxWidth="Infinity" styleClass="btn-primary"/>
+                    <HBox spacing="8.0">
+                        <Button fx:id="editButton" text="✏️ Edit Case" onAction="#onEditCase" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
+                        <Button fx:id="deleteButton" text="🗑️ Delete Case" onAction="#onDeleteCase" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-danger"/>
+                    </HBox>
+                </VBox>
+            </VBox>
+
+        </SplitPane>
+
+    </VBox>
+
+</StackPane>

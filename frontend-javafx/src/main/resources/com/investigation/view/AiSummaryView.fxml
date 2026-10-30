@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane fx:id="overlayPane" stylesheets="@../css/theme.css"
+           xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.investigation.controller.AiSummaryController">
+
+    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+        <VBox spacing="16.0" style="-fx-padding: 20px;">
+
+            <!-- Header -->
+            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                <VBox spacing="2.0">
+                    <Label text="AI INVESTIGATIVE SYNTHESIS &amp; EXECUTIVE SUMMARY" styleClass="section-title" style="-fx-font-size: 18px;"/>
+                    <Label fx:id="activeCaseHeaderLabel" text="AUTOMATED CASE ANALYSIS &amp; THREAT CORRELATION" styleClass="section-subtitle" style="-fx-text-fill: #00F0FF; -fx-font-weight: bold;"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="📋 Copy Report" onAction="#onCopySummary" styleClass="btn-primary"/>
+                <Button text="🔄 Re-run Analysis" onAction="#refreshData" styleClass="btn-secondary"/>
+            </HBox>
+
+            <!-- MANDATORY FORENSIC DISCLAIMER BANNER -->
+            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="disclaimer-banner">
+                <Label text="⚖️" style="-fx-font-size: 20px;"/>
+                <VBox spacing="2.0">
+                    <Label text="ETHICAL FORENSIC NOTICE &amp; NON-CULPABILITY DIRECTIVE"
+                           style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #EF4444;"/>
+                    <Label text="AI findings and anomaly confidence scores are automated hypotheses designed to assist digital forensic examiners. They do NOT constitute definitive proof of culpability or guilt. All investigative leads require manual evidentiary corroboration before legal submission."
+                           style="-fx-font-size: 11px; -fx-text-fill: #FCA5A5;" wrapText="true"/>
+                </VBox>
+            </HBox>
+
+            <!-- 4 Metric Cards -->
+            <GridPane hgap="16.0" vgap="16.0">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="25.0"/>
+                    <ColumnConstraints percentWidth="25.0"/>
+                    <ColumnConstraints percentWidth="25.0"/>
+                    <ColumnConstraints percentWidth="25.0"/>
+                </columnConstraints>
+
+                <!-- 1. Total Scanned Events -->
+                <VBox GridPane.columnIndex="0" styleClass="cyber-card">
+                    <Label text="TOTAL SCANNED EVENTS" styleClass="stat-label"/>
+                    <Label fx:id="totalEventsLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #38BDF8;"/>
+                    <Label text="M2 Ingest Normalized" style="-fx-font-size: 10px; -fx-text-fill: #64748B;"/>
+                </VBox>
+
+                <!-- 2. Anomalies Flagged -->
+                <VBox GridPane.columnIndex="1" styleClass="cyber-card-highlight">
+                    <Label text="ANOMALIES FLAGGED" styleClass="stat-label"/>
+                    <Label fx:id="totalAnomaliesLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #EF4444;"/>
+                    <Label text="Outliers &amp; High-Risk Spikes" style="-fx-font-size: 10px; -fx-text-fill: #EF4444;"/>
+                </VBox>
+
+                <!-- 3. Peak Risk Score -->
+                <VBox GridPane.columnIndex="2" styleClass="cyber-card">
+                    <Label text="PEAK ANOMALY SCORE" styleClass="stat-label"/>
+                    <Label fx:id="riskScoreLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #F59E0B; -fx-font-family: monospace;"/>
+                    <Label text="Z-Score / Isolation Forest" style="-fx-font-size: 10px; -fx-text-fill: #64748B;"/>
+                </VBox>
+
+                <!-- 4. Primary Threat Vector -->
+                <VBox GridPane.columnIndex="3" styleClass="cyber-card">
+                    <Label text="PRIMARY THREAT VECTOR" styleClass="stat-label"/>
+                    <Label fx:id="primaryVectorLabel" text="--" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #00F0FF;" wrapText="true"/>
+                    <Label text="Correlated Incident Pattern" style="-fx-font-size: 10px; -fx-text-fill: #64748B;"/>
+                </VBox>
+            </GridPane>
+
+            <!-- Key Statistical Indicators -->
+            <VBox spacing="8.0" styleClass="cyber-card">
+                <Label text="CORRELATED TELEMETRY METRICS &amp; ENTITY PROFILES" styleClass="stat-label"/>
+                <HBox fx:id="statsContainer" spacing="10.0" alignment="CENTER_LEFT">
+                    <!-- Populated dynamically -->
+                </HBox>
+            </VBox>
+
+            <!-- Executive Summary Document -->
+            <VBox spacing="8.0" styleClass="cyber-card">
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="AI INVESTIGATION REPORT &amp; CHRONOLOGICAL NARRATIVE" styleClass="section-title"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label text="Derived from GET /api/cases/{id}/analysis" style="-fx-font-size: 10px; -fx-font-family: monospace; -fx-text-fill: #64748B;"/>
+                </HBox>
+
+                <TextArea fx:id="summaryTextArea" prefRowCount="10" editable="false" wrapText="true"
+                          style="-fx-font-family: 'Consolas', monospace; -fx-font-size: 12px; -fx-text-fill: #F8FAFC; -fx-background-color: #0A0F1D;"/>
+            </VBox>
+
+            <!-- Key Findings & Potential Investigative Leads -->
+            <VBox spacing="10.0" styleClass="cyber-card">
+                <Label text="CORRELATED INVESTIGATIVE LEADS &amp; ANOMALY TRACES" styleClass="section-title"/>
+                <Label text="Traceable evidentiary references with recommended forensic examination actions" styleClass="section-subtitle"/>
+
+                <VBox fx:id="findingsCardsContainer" spacing="10.0">
+                    <!-- Dynamic finding lead cards injected here -->
+                </VBox>
+            </VBox>
+
+        </VBox>
+    </ScrollPane>
+
+</StackPane>

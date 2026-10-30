@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane fx:id="overlayPane" stylesheets="@../css/theme.css"
+           xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.investigation.controller.DashboardController">
+
+    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+        <VBox spacing="16.0" style="-fx-padding: 20px;">
+
+            <!-- Header and Mock Data Notice Banner -->
+            <VBox spacing="6.0">
+                <HBox alignment="CENTER_LEFT" spacing="12.0">
+                    <Label text="OPERATIONAL DASHBOARD" styleClass="section-title" style="-fx-font-size: 18px;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button text="🔄 Refresh Stats" onAction="#refreshData" styleClass="btn-secondary"/>
+                </HBox>
+                <Label text="Global investigation metrics, threat telemetry summaries, and active incident streams." styleClass="section-subtitle"/>
+
+                <!-- Clearly identified mock data notice -->
+                <Label fx:id="mockNoticeLabel"
+                       text="⚠️ [DEMO MODE ACTIVE] Rendering synthetic digital forensics telemetry. Connect Spring Boot backend (port 8080) and toggle mode in top header for live operational feeds."
+                       style="-fx-background-color: rgba(245, 158, 11, 0.12); -fx-border-color: #F59E0B; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-text-fill: #F59E0B; -fx-padding: 8px 12px; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 4 Key Stat Cards -->
+            <GridPane hgap="16.0" vgap="16.0">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="25.0"/>
+                    <ColumnConstraints percentWidth="25.0"/>
+                    <ColumnConstraints percentWidth="25.0"/>
+                    <ColumnConstraints percentWidth="25.0"/>
+                </columnConstraints>
+
+                <!-- 1. Total Cases -->
+                <VBox GridPane.columnIndex="0" styleClass="cyber-card">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="TOTAL CASES" styleClass="stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="📁" style="-fx-text-fill: #00F0FF; -fx-font-size: 16px;"/>
+                    </HBox>
+                    <Label fx:id="totalCasesLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #00F0FF;"/>
+                    <Label fx:id="openCasesLabel" text="-- Active" style="-fx-font-size: 11px; -fx-text-fill: #10B981; -fx-font-weight: bold;"/>
+                </VBox>
+
+                <!-- 2. Total Evidence Records -->
+                <VBox GridPane.columnIndex="1" styleClass="cyber-card">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="TOTAL EVIDENCE RECORDS" styleClass="stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="🗄️" style="-fx-text-fill: #38BDF8; -fx-font-size: 16px;"/>
+                    </HBox>
+                    <Label fx:id="totalEvidenceLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #38BDF8;"/>
+                    <Label text="CSV / PCAP / Logs" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+                </VBox>
+
+                <!-- 3. Total Processed Events -->
+                <VBox GridPane.columnIndex="2" styleClass="cyber-card">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="TOTAL PROCESSED EVENTS" styleClass="stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="⚡" style="-fx-text-fill: #A855F7; -fx-font-size: 16px;"/>
+                    </HBox>
+                    <Label fx:id="totalEventsLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #A855F7;"/>
+                    <Label text="M2 Normalized Ingest" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+                </VBox>
+
+                <!-- 4. Total Anomalies -->
+                <VBox GridPane.columnIndex="3" styleClass="cyber-card-highlight">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="TOTAL ANOMALIES" styleClass="stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="🚨" style="-fx-text-fill: #EF4444; -fx-font-size: 16px;"/>
+                    </HBox>
+                    <Label fx:id="totalAnomaliesLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #EF4444;"/>
+                    <Label fx:id="criticalAnomaliesLabel" text="-- Critical" style="-fx-font-size: 11px; -fx-text-fill: #EF4444; -fx-font-weight: bold;"/>
+                </VBox>
+            </GridPane>
+
+            <!-- Lower Split: Case Summaries Table (Left) & Recent Activity (Right) -->
+            <GridPane hgap="16.0" vgap="16.0">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="65.0"/>
+                    <ColumnConstraints percentWidth="35.0"/>
+                </columnConstraints>
+
+                <!-- Active Cases Summary Table -->
+                <VBox GridPane.columnIndex="0" spacing="10.0" styleClass="cyber-card">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="ACTIVE CASES SUMMARY" styleClass="section-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="Double-click row to select as Active Case" style="-fx-font-size: 10px; -fx-text-fill: #64748B;"/>
+                    </HBox>
+                    <TableView fx:id="casesSummaryTable" prefHeight="380.0">
+                        <columns>
+                            <TableColumn fx:id="colCaseNumber" text="CASE #" prefWidth="120.0"/>
+                            <TableColumn fx:id="colTitle" text="TITLE / SCOPE" prefWidth="250.0"/>
+                            <TableColumn fx:id="colPriority" text="PRIORITY" prefWidth="90.0"/>
+                            <TableColumn fx:id="colStatus" text="STATUS" prefWidth="95.0"/>
+                            <TableColumn fx:id="colEvents" text="EVENTS" prefWidth="75.0"/>
+                            <TableColumn fx:id="colAnomalies" text="ANOMALIES" prefWidth="85.0"/>
+                        </columns>
+                        <placeholder>
+                            <Label text="No cases available."/>
+                        </placeholder>
+                    </TableView>
+                </VBox>
+
+                <!-- Recent Investigation Activity Stream -->
+                <VBox GridPane.columnIndex="1" spacing="10.0" styleClass="cyber-card">
+                    <Label text="RECENT INVESTIGATION ACTIVITY" styleClass="section-title"/>
+                    <Label text="Real-time timeline of evidence ingest and detections" styleClass="section-subtitle"/>
+                    <ScrollPane fitToWidth="true" prefHeight="380.0" style="-fx-background-color: transparent;">
+                        <VBox fx:id="recentActivityContainer" spacing="8.0">
+                            <!-- Populated dynamically -->
+                        </VBox>
+                    </ScrollPane>
+                </VBox>
+            </GridPane>
+
+        </VBox>
+    </ScrollPane>
+
+</StackPane>

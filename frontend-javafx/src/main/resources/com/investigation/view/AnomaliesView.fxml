@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane fx:id="overlayPane" stylesheets="@../css/theme.css"
+           xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.investigation.controller.AnomaliesController">
+
+    <VBox spacing="14.0" style="-fx-padding: 20px;">
+
+        <!-- Header & Mock Notice -->
+        <VBox spacing="4.0">
+            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                <VBox spacing="2.0">
+                    <Label text="AI ANOMALY DETECTION FINDINGS" styleClass="section-title" style="-fx-font-size: 18px;"/>
+                    <Label fx:id="activeCaseHeaderLabel" text="M3 MACHINE LEARNING ANOMALY DETECTIONS" styleClass="section-subtitle" style="-fx-text-fill: #00F0FF; -fx-font-weight: bold;"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="🔄 Refresh Findings" onAction="#refreshData" styleClass="btn-secondary"/>
+            </HBox>
+
+            <Label fx:id="mockNoticeLabel"
+                   text="⚠️ [SIMULATED AI SERVICE FINDINGS] Displays demo output derived from M3 statistical and machine learning anomaly contracts (GET /api/cases/{id}/analysis)."
+                   style="-fx-background-color: rgba(245, 158, 11, 0.12); -fx-border-color: #F59E0B; -fx-border-radius: 4px; -fx-background-radius: 4px; -fx-text-fill: #F59E0B; -fx-padding: 6px 10px; -fx-font-size: 10px; -fx-font-weight: bold;"/>
+        </VBox>
+
+        <!-- Search and Severity Filter Bar -->
+        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="cyber-card" style="-fx-padding: 10px 14px;">
+            <Label text="🔍" style="-fx-text-fill: #38BDF8;"/>
+            <TextField fx:id="searchField" promptText="Search anomalies by reason, method, entity, event ID..." HBox.hgrow="ALWAYS"/>
+
+            <Label text="Severity Filter:" style="-fx-font-size: 11px; -fx-text-fill: #94A3B8; -fx-font-weight: bold;"/>
+            <ComboBox fx:id="severityFilterComboBox" prefWidth="130.0"/>
+
+            <Label fx:id="anomalyCountLabel" text="Showing 0 anomalies" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+        </HBox>
+
+        <!-- Main Split: Anomalies Table (Left) + Details Panel (Right) -->
+        <SplitPane dividerPositions="0.68" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+
+            <!-- Table -->
+            <VBox spacing="8.0" styleClass="cyber-card">
+                <TableView fx:id="anomaliesTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colSeverity" text="SEVERITY" prefWidth="95.0"/>
+                        <TableColumn fx:id="colScore" text="SCORE" prefWidth="75.0"/>
+                        <TableColumn fx:id="colEventType" text="EVENT TYPE" prefWidth="150.0"/>
+                        <TableColumn fx:id="colReason" text="ANOMALY REASON / PATTERN" prefWidth="250.0"/>
+                        <TableColumn fx:id="colMethod" text="DETECTION METHOD" prefWidth="160.0"/>
+                        <TableColumn fx:id="colEventId" text="EVENT REF" prefWidth="90.0"/>
+                        <TableColumn fx:id="colTimestamp" text="DATE" prefWidth="90.0"/>
+                    </columns>
+                    <placeholder>
+                        <Label text="No anomalies detected for this case."/>
+                    </placeholder>
+                </TableView>
+            </VBox>
+
+            <!-- Anomaly Details Inspector -->
+            <VBox fx:id="detailPanel" spacing="12.0" styleClass="cyber-card" style="-fx-background-color: #0D1424;">
+                <HBox alignment="CENTER_LEFT" spacing="8.0">
+                    <Label text="ANOMALY INSPECTION" styleClass="stat-label"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <HBox fx:id="detailSeverityBadge"/>
+                </HBox>
+
+                <!-- Anomaly Score Gauge -->
+                <VBox spacing="4.0" style="-fx-background-color: #090E1A; -fx-padding: 10px; -fx-background-radius: 6px;">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="ANOMALY RISK SCORE" style="-fx-font-size: 10px; -fx-text-fill: #64748B; -fx-font-weight: bold;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="detailScore" text="0.00 / 1.00" style="-fx-font-size: 13px; -fx-font-family: monospace; -fx-font-weight: bold; -fx-text-fill: #EF4444;"/>
+                    </HBox>
+                    <ProgressBar fx:id="detailScoreBar" progress="0.0" maxWidth="Infinity"/>
+                </VBox>
+
+                <VBox spacing="6.0" style="-fx-background-color: #090E1A; -fx-padding: 10px; -fx-background-radius: 6px;">
+                    <HBox spacing="8.0">
+                        <Label text="Event Category:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailEventType" text="--" style="-fx-font-size: 11px; -fx-text-fill: #00F0FF; -fx-font-weight: bold;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Timestamp:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailTimestamp" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Supporting Event:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailEventId" text="--" style="-fx-font-size: 11px; -fx-text-fill: #38BDF8; -fx-font-family: monospace;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Detection Method:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailMethod" text="--" style="-fx-font-size: 11px; -fx-text-fill: #A855F7;"/>
+                    </HBox>
+                    <HBox spacing="8.0">
+                        <Label text="Affected Entity:" style="-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 95px;"/>
+                        <Label fx:id="detailAffectedEntity" text="--" style="-fx-font-size: 11px; -fx-text-fill: #F59E0B; -fx-font-weight: bold;"/>
+                    </HBox>
+                </VBox>
+
+                <VBox spacing="4.0">
+                    <Label text="ANOMALY REASON &amp; PATTERN ANALYSIS" styleClass="stat-label"/>
+                    <TextArea fx:id="detailReasonArea" editable="false" wrapText="true" prefRowCount="3"
+                              style="-fx-font-size: 11px; -fx-text-fill: #F8FAFC;"/>
+                </VBox>
+
+                <VBox spacing="4.0" VBox.vgrow="ALWAYS">
+                    <Label text="RECOMMENDED FORENSIC TRIAGE LEAD" styleClass="stat-label" style="-fx-text-fill: #00F0FF;"/>
+                    <TextArea fx:id="detailSuggestedActionArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"
+                              style="-fx-font-size: 11px; -fx-text-fill: #38BDF8;"/>
+                </VBox>
+
+                <Label text="⚠️ AI findings are investigative leads, not legal proof of guilt."
+                       style="-fx-font-size: 9px; -fx-text-fill: #64748B; -fx-font-style: italic;"/>
+            </VBox>
+
+        </SplitPane>
+
+    </VBox>
+
+</StackPane>

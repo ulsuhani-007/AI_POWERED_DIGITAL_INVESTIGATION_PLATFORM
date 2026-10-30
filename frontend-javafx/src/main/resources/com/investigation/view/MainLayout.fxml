@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane fx:id="rootBorderPane" prefHeight="800.0" prefWidth="1280.0"
+            stylesheets="@../css/theme.css"
+            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.investigation.controller.MainLayoutController">
+
+    <!-- Top Header -->
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="top-header">
+            <!-- Brand -->
+            <HBox alignment="CENTER_LEFT" spacing="8.0">
+                <Label text="⚡" style="-fx-font-size: 18px; -fx-text-fill: #00F0FF;"/>
+                <VBox spacing="1.0">
+                    <Label text="AEGIS WORKSTATION" styleClass="brand-title"/>
+                    <Label text="AI-POWERED DIGITAL FORENSIC INTELLIGENCE" styleClass="section-subtitle"/>
+                </VBox>
+                <Label text="v1.0" styleClass="brand-badge"/>
+            </HBox>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- Active Case Quick Selector -->
+            <HBox alignment="CENTER_LEFT" spacing="8.0">
+                <Label text="ACTIVE CASE:" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #64748B;"/>
+                <ComboBox fx:id="activeCaseComboBox" prefWidth="280.0" promptText="Select Active Case..."/>
+            </HBox>
+
+            <Separator orientation="VERTICAL"/>
+
+            <!-- Mock Mode Toggle & Badges -->
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <Label fx:id="mockBadge" text="SIMULATED MOCK MODE" styleClass="mock-badge"/>
+                <Label fx:id="backendStatusLabel" text="BACKEND: OFFLINE" style="-fx-text-fill: #64748B; -fx-font-size: 10px; -fx-font-weight: bold;"/>
+                <Button text="Switch Mode" onAction="#onToggleMockMode" styleClass="btn-secondary" style="-fx-font-size: 10px; -fx-padding: 3px 8px;"/>
+            </HBox>
+
+            <Separator orientation="VERTICAL"/>
+
+            <!-- Clock & Investigator Indicator -->
+            <HBox alignment="CENTER_RIGHT" spacing="12.0">
+                <Label fx:id="utcClockLabel" text="00:00:00 UTC" style="-fx-font-family: 'Consolas', monospace; -fx-font-size: 12px; -fx-text-fill: #00F0FF; -fx-font-weight: bold;"/>
+                <HBox alignment="CENTER_LEFT" spacing="6.0" style="-fx-background-color: #1E293B; -fx-padding: 4px 10px; -fx-background-radius: 14px;">
+                    <Label text="👤" style="-fx-font-size: 11px;"/>
+                    <Label text="Lead Examiner" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #94A3B8;"/>
+                </HBox>
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- Fixed Left Sidebar -->
+    <left>
+        <VBox spacing="4.0" styleClass="sidebar">
+            <Label text="INVESTIGATION MODULES" styleClass="sidebar-heading"/>
+
+            <!-- Exactly 7 items in exact order -->
+            <Button fx:id="navDashboard" text="📊  1. Dashboard" onAction="#onNavDashboard" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="navCases" text="📁  2. Cases" onAction="#onNavCases" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="navEvidence" text="🗄️  3. Evidence" onAction="#onNavEvidence" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="navTimeline" text="⏱️  4. Timeline" onAction="#onNavTimeline" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="navGraph" text="🕸️  5. Relationship Graph" onAction="#onNavGraph" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="navAnomalies" text="🚨  6. Anomalies" onAction="#onNavAnomalies" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="navAiSummary" text="🧠  7. AI Summary" onAction="#onNavAiSummary" maxWidth="Infinity" styleClass="nav-button"/>
+
+            <Region VBox.vgrow="ALWAYS"/>
+
+            <!-- System Info Footnote -->
+            <VBox spacing="4.0" style="-fx-padding: 10px; -fx-background-color: #0F172A; -fx-background-radius: 6px; -fx-border-color: #1E293B; -fx-border-radius: 6px;">
+                <HBox alignment="CENTER_LEFT" spacing="6.0">
+                    <Label text="●" style="-fx-text-fill: #10B981; -fx-font-size: 10px;"/>
+                    <Label text="STATION READY" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #10B981;"/>
+                </HBox>
+                <Label text="Java 21 • JavaFX • REST" style="-fx-font-size: 9px; -fx-text-fill: #64748B;"/>
+                <Label text="M4 Frontend Module" style="-fx-font-size: 9px; -fx-text-fill: #475569;"/>
+            </VBox>
+        </VBox>
+    </left>
+
+    <!-- Main Workspace Area -->
+    <center>
+        <StackPane fx:id="contentArea" style="-fx-background-color: #090D16;">
+            <!-- Dynamic view injected here -->
+        </StackPane>
+    </center>
+
+</BorderPane>
