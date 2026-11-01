@@ -1,0 +1,9 @@
+
+# macOS files
+.DS_Store
+
+# Java build output
+backend/target/
+
+# Secrets
+.env
