@@ -20,7 +20,7 @@ cybertrace:
       start-hour: 9
       end-hour: 18
     machine-learning:
-      score-threshold: 0.65
+      score-threshold: 0.60
       num-trees: 100
       subsample: 0.7
       random-seed: 42

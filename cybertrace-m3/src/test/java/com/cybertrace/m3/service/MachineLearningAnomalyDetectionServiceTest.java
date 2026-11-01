@@ -22,8 +22,8 @@ class MachineLearningAnomalyDetectionServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Default configuration: threshold 0.65, 100 trees, 0.7 subsample, seed 42, min batch size 5
-        service = new MachineLearningAnomalyDetectionService(0.65, 100, 0.7, 42L, 5);
+        // Default configuration: threshold 0.60, 100 trees, 0.7 subsample, seed 42, min batch size 5
+        service = new MachineLearningAnomalyDetectionService(0.60, 100, 0.7, 42L, 5);
     }
 
     private NormalizedEventDTO createEvent(
@@ -52,6 +52,22 @@ class MachineLearningAnomalyDetectionServiceTest {
                 .build();
     }
 
+    private List<NormalizedEventDTO> createStandardBaseline(int count) {
+        List<NormalizedEventDTO> baseline = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            baseline.add(createEvent(
+                    "base-ev-" + i,
+                    "NETWORK_EVENT",
+                    LocalDateTime.of(2026, 10, 26, 9 + (i % 8), i % 60, 0),
+                    (long) (1000 + (i * 50)),
+                    443,
+                    "READ",
+                    "Normal HTTPS connection"
+            ));
+        }
+        return baseline;
+    }
+
     @Test
     @DisplayName("1. Null input returns empty list safely")
     void testNullInputReturnsEmptyList() {
@@ -75,6 +91,10 @@ class MachineLearningAnomalyDetectionServiceTest {
                 createEvent("ev-3", "LOGIN", null, null, null, null, "User alice login attempt: SUCCESS")
         );
 
+        boolean fitted = service.fit(events);
+        assertThat(fitted).isFalse();
+        assertThat(service.isFitted()).isFalse();
+
         List<AnomalyFindingDTO> findings = service.detect(events);
         assertThat(findings).isNotNull().isEmpty();
     }
@@ -82,11 +102,11 @@ class MachineLearningAnomalyDetectionServiceTest {
     @Test
     @DisplayName("4. Normal batch produces no false-positive anomalies")
     void testNormalBatchProducesNoAnomalies() {
-        // 20 uniform daytime login events with identical normal profiles
-        List<NormalizedEventDTO> events = new ArrayList<>();
+        // Fit on legitimate baseline of 20 uniform daytime login events
+        List<NormalizedEventDTO> baseline = new ArrayList<>();
         for (int i = 0; i < 20; i++) {
-            events.add(createEvent(
-                    "ev-" + i,
+            baseline.add(createEvent(
+                    "base-ev-" + i,
                     "LOGIN",
                     LocalDateTime.of(2026, 10, 26, 10, i, 0),
                     null,
@@ -95,19 +115,33 @@ class MachineLearningAnomalyDetectionServiceTest {
                     "User analyst login attempt: SUCCESS"
             ));
         }
+        service.fit(baseline);
 
-        List<AnomalyFindingDTO> findings = service.detect(events);
-        // Does not mark every event as anomalous
+        // Score 5 normal case events
+        List<NormalizedEventDTO> caseEvents = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            caseEvents.add(createEvent(
+                    "case-ev-" + i,
+                    "LOGIN",
+                    LocalDateTime.of(2026, 10, 26, 10, i + 5, 0),
+                    null,
+                    null,
+                    "AUTHENTICATE",
+                    "User analyst login attempt: SUCCESS"
+            ));
+        }
+
+        List<AnomalyFindingDTO> findings = service.detect(caseEvents);
         assertThat(findings).isEmpty();
     }
 
     @Test
     @DisplayName("5. Clearly unusual network bytes detected as anomaly")
     void testClearlyUnusualNetworkBytesDetected() {
-        // 19 normal network events (1000 - 1500 bytes) and 1 massive exfiltration event (10,000,000,000 bytes)
-        List<NormalizedEventDTO> events = new ArrayList<>();
+        // 19 normal network events (1000 - 1500 bytes) as legitimate baseline
+        List<NormalizedEventDTO> baseline = new ArrayList<>();
         for (int i = 0; i < 19; i++) {
-            events.add(createEvent(
+            baseline.add(createEvent(
                     "norm-" + i,
                     "NETWORK_EVENT",
                     LocalDateTime.of(2026, 10, 26, 14, i, 0),
@@ -117,7 +151,9 @@ class MachineLearningAnomalyDetectionServiceTest {
                     "Normal HTTPS connection"
             ));
         }
+        service.fit(baseline);
 
+        // Case event: massive exfiltration event (10,000,000,000 bytes)
         NormalizedEventDTO extremeSpike = createEvent(
                 "spike-999",
                 "NETWORK_EVENT",
@@ -127,9 +163,8 @@ class MachineLearningAnomalyDetectionServiceTest {
                 "READ",
                 "Massive data transfer"
         );
-        events.add(extremeSpike);
 
-        List<AnomalyFindingDTO> findings = service.detect(events);
+        List<AnomalyFindingDTO> findings = service.detect(List.of(extremeSpike));
 
         assertThat(findings).isNotEmpty();
         AnomalyFindingDTO spikeFinding = findings.stream()
@@ -150,10 +185,26 @@ class MachineLearningAnomalyDetectionServiceTest {
     @Test
     @DisplayName("6. Nullable bytes, port, timestamp and description handled safely")
     void testNullableFieldsHandledSafely() {
-        List<NormalizedEventDTO> events = new ArrayList<>();
+        List<NormalizedEventDTO> baseline = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            events.add(NormalizedEventDTO.builder()
-                    .eventId("null-test-" + i)
+            baseline.add(NormalizedEventDTO.builder()
+                    .eventId("null-base-" + i)
+                    .caseId("case-null")
+                    .timestamp(LocalDateTime.of(2026, 10, 26, 9 + i, 0, 0))
+                    .eventType("FILE_ACCESS")
+                    .port(null)
+                    .bytes((long) (100 * (i + 1)))
+                    .action("READ")
+                    .description(null)
+                    .sourceEvidenceId("ev-null")
+                    .build());
+        }
+        service.fit(baseline);
+
+        List<NormalizedEventDTO> caseEvents = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            caseEvents.add(NormalizedEventDTO.builder()
+                    .eventId("null-case-" + i)
                     .caseId("case-null")
                     .timestamp(null) // null timestamp
                     .eventType("FILE_ACCESS")
@@ -166,14 +217,17 @@ class MachineLearningAnomalyDetectionServiceTest {
         }
 
         // Must execute without NullPointerException
-        List<AnomalyFindingDTO> findings = service.detect(events);
+        List<AnomalyFindingDTO> findings = service.detect(caseEvents);
         assertThat(findings).isNotNull();
     }
 
     @Test
     @DisplayName("7. Multiple event types in batch handled safely")
     void testMultipleEventTypesHandledSafely() {
-        List<NormalizedEventDTO> events = List.of(
+        List<NormalizedEventDTO> baseline = createStandardBaseline(15);
+        service.fit(baseline);
+
+        List<NormalizedEventDTO> caseEvents = List.of(
                 createEvent("ev-1", "LOGIN", null, null, null, null, "User a login attempt: SUCCESS"),
                 createEvent("ev-2", "FILE_ACCESS", null, 500L, null, "READ", "Read file"),
                 createEvent("ev-3", "NETWORK_EVENT", null, 2048L, 80, "TRANSFER", "HTTP connection"),
@@ -182,16 +236,16 @@ class MachineLearningAnomalyDetectionServiceTest {
                 createEvent("ev-6", "LOGIN", null, null, null, null, "User b login attempt: SUCCESS")
         );
 
-        List<AnomalyFindingDTO> findings = service.detect(events);
+        List<AnomalyFindingDTO> findings = service.detect(caseEvents);
         assertThat(findings).isNotNull();
     }
 
     @Test
     @DisplayName("8. Deterministic output for same input batch (reproducibility)")
     void testDeterministicOutput() {
-        List<NormalizedEventDTO> events = new ArrayList<>();
+        List<NormalizedEventDTO> baseline = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
-            events.add(createEvent(
+            baseline.add(createEvent(
                     "det-" + i,
                     "NETWORK_EVENT",
                     LocalDateTime.of(2026, 10, 26, 9 + (i % 8), 0, 0),
@@ -201,8 +255,10 @@ class MachineLearningAnomalyDetectionServiceTest {
                     "Traffic " + i
             ));
         }
-        // Add an outlier
-        events.add(createEvent(
+        service.fit(baseline);
+
+        // Case outlier
+        NormalizedEventDTO outlier = createEvent(
                 "det-outlier",
                 "NETWORK_EVENT",
                 LocalDateTime.of(2026, 10, 26, 3, 0, 0), // 3 AM off-hours
@@ -210,10 +266,10 @@ class MachineLearningAnomalyDetectionServiceTest {
                 65530,                                   // high port
                 "EXPORT",
                 "Exfiltration"
-        ));
+        );
 
-        List<AnomalyFindingDTO> run1 = service.detect(events);
-        List<AnomalyFindingDTO> run2 = service.detect(events);
+        List<AnomalyFindingDTO> run1 = service.detect(List.of(outlier));
+        List<AnomalyFindingDTO> run2 = service.detect(List.of(outlier));
 
         assertThat(run1).hasSameSizeAs(run2);
         for (int i = 0; i < run1.size(); i++) {
@@ -230,12 +286,11 @@ class MachineLearningAnomalyDetectionServiceTest {
     @Test
     @DisplayName("9. Preserves original M2 event_id in every ML finding")
     void testEventIdPreservation() {
-        List<NormalizedEventDTO> events = new ArrayList<>();
-        for (int i = 0; i < 12; i++) {
-            events.add(createEvent("norm-" + i, "LOGIN", null, null, null, null, "User x login attempt: SUCCESS"));
-        }
+        List<NormalizedEventDTO> baseline = createStandardBaseline(15);
+        service.fit(baseline);
+
         String customId = "forensic-evidence-target-xyz-987";
-        events.add(createEvent(
+        NormalizedEventDTO outlier = createEvent(
                 customId,
                 "NETWORK_EVENT",
                 LocalDateTime.of(2026, 10, 26, 2, 15, 0),
@@ -243,37 +298,46 @@ class MachineLearningAnomalyDetectionServiceTest {
                 4444,
                 "EXPORT",
                 "Suspicious transfer"
-        ));
+        );
 
-        List<AnomalyFindingDTO> findings = service.detect(events);
+        List<AnomalyFindingDTO> findings = service.detect(List.of(outlier));
         assertThat(findings).anyMatch(f -> customId.equals(f.getEventId()));
     }
 
     @Test
     @DisplayName("10. Does not mutate the input event list")
     void testNoInputMutation() {
-        List<NormalizedEventDTO> originalList = new ArrayList<>();
-        for (int i = 0; i < 8; i++) {
-            originalList.add(createEvent("ev-" + i, "LOGIN", null, null, null, null, "login: SUCCESS"));
-        }
-        List<NormalizedEventDTO> copyBefore = new ArrayList<>(originalList);
+        List<NormalizedEventDTO> baseline = createStandardBaseline(10);
+        List<NormalizedEventDTO> baselineCopy = new ArrayList<>(baseline);
+        service.fit(baseline);
+        assertThat(baseline).containsExactlyElementsOf(baselineCopy);
 
-        service.detect(originalList);
+        List<NormalizedEventDTO> caseList = List.of(
+                createEvent("case-1", "LOGIN", null, null, null, null, "login: SUCCESS"),
+                createEvent("case-2", "NETWORK_EVENT", null, 5000L, 80, "READ", "traffic")
+        );
+        List<NormalizedEventDTO> caseCopy = new ArrayList<>(caseList);
 
-        assertThat(originalList).containsExactlyElementsOf(copyBefore);
+        service.detect(caseList);
+        assertThat(caseList).containsExactlyElementsOf(caseCopy);
     }
 
     @Test
     @DisplayName("11. Validates score in [0.0, 1.0] and valid severity assignment")
     void testScoreAndSeverityValidity() {
-        List<NormalizedEventDTO> events = new ArrayList<>();
+        List<NormalizedEventDTO> baseline = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
-            events.add(createEvent("ev-" + i, "FILE_ACCESS", null, 100L, null, "READ", "read doc"));
+            baseline.add(createEvent("ev-" + i, "FILE_ACCESS",
+                    LocalDateTime.of(2026, 10, 26, 9 + (i % 8), 0, 0),
+                    100L + (i * 10), null, "READ", "read doc"));
         }
-        events.add(createEvent("outlier-1", "FILE_ACCESS", LocalDateTime.of(2026, 10, 26, 1, 0, 0),
-                50_000_000L, null, "DELETE", "mass delete"));
+        service.fit(baseline);
 
-        List<AnomalyFindingDTO> findings = service.detect(events);
+        NormalizedEventDTO outlier = createEvent("outlier-1", "FILE_ACCESS",
+                LocalDateTime.of(2026, 10, 26, 1, 0, 0),
+                50_000_000L, null, "DELETE", "mass delete");
+
+        List<AnomalyFindingDTO> findings = service.detect(List.of(outlier));
 
         for (AnomalyFindingDTO finding : findings) {
             assertThat(finding.getScore()).isNotNull();
@@ -286,16 +350,12 @@ class MachineLearningAnomalyDetectionServiceTest {
     @Test
     @DisplayName("12. No duplicate findings for the same event")
     void testNoDuplicateFindingsForSameEvent() {
-        List<NormalizedEventDTO> events = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            events.add(createEvent("ev-" + i, "LOGIN", null, null, null, null, "login: SUCCESS"));
-        }
-        // Duplicate event with same ID
-        NormalizedEventDTO outlier = createEvent("dup-id-1", "NETWORK_EVENT", null, 5_000_000_000L, 9999, "EXPORT", "Spike");
-        events.add(outlier);
-        events.add(outlier);
+        List<NormalizedEventDTO> baseline = createStandardBaseline(15);
+        service.fit(baseline);
 
-        List<AnomalyFindingDTO> findings = service.detect(events);
+        NormalizedEventDTO outlier = createEvent("dup-id-1", "NETWORK_EVENT", null, 5_000_000_000L, 9999, "EXPORT", "Spike");
+
+        List<AnomalyFindingDTO> findings = service.detect(List.of(outlier, outlier));
 
         long count = findings.stream().filter(f -> "dup-id-1".equals(f.getEventId())).count();
         assertThat(count).isLessThanOrEqualTo(1);
@@ -313,11 +373,98 @@ class MachineLearningAnomalyDetectionServiceTest {
         assertThat(customService.getRandomSeed()).isEqualTo(999L);
         assertThat(customService.getMinBatchSize()).isEqualTo(10);
 
-        // Batch with 7 items (< 10) should return empty list
+        // Baseline with 7 items (< 10) should return empty list and not fit
         List<NormalizedEventDTO> events = new ArrayList<>();
         for (int i = 0; i < 7; i++) {
             events.add(createEvent("ev-" + i, "LOGIN", null, null, null, null, "login: SUCCESS"));
         }
+        assertThat(customService.fit(events)).isFalse();
         assertThat(customService.detect(events)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("14. Baseline events are used for model fitting and case events are scored separately")
+    void testBaselineEventsUsedForModelFittingAndCaseEventsScoredSeparately() {
+        List<NormalizedEventDTO> baseline = createStandardBaseline(20);
+        boolean fitted = service.fit(baseline);
+        assertThat(fitted).isTrue();
+        assertThat(service.isFitted()).isTrue();
+
+        NormalizedEventDTO caseEvent = createEvent("case-anom-1", "NETWORK_EVENT",
+                LocalDateTime.of(2026, 10, 26, 2, 0, 0),
+                9_000_000_000L, 4444, "EXPORT", "Exfiltration");
+
+        List<AnomalyFindingDTO> findings = service.detect(List.of(caseEvent));
+
+        // Finding corresponds strictly to the case event, not baseline events
+        assertThat(findings).hasSize(1);
+        assertThat(findings.get(0).getEventId()).isEqualTo("case-anom-1");
+    }
+
+    @Test
+    @DisplayName("15. Case events are NOT added to the training baseline")
+    void testCaseEventsAreNotAddedToTrainingBaseline() {
+        InMemoryHistoricalBaselineProvider provider = new InMemoryHistoricalBaselineProvider();
+        List<NormalizedEventDTO> initialBaseline = createStandardBaseline(15);
+        provider.setBaselineEvents(initialBaseline);
+
+        service.setBaselineProvider(provider);
+        service.fit(provider.getBaselineEvents());
+
+        int baselineCountBefore = provider.getBaselineEvents().size();
+        assertThat(baselineCountBefore).isEqualTo(15);
+
+        NormalizedEventDTO caseEvent1 = createEvent("case-spike-1", "NETWORK_EVENT", null, 10_000_000_000L, 8888, "EXPORT", "Attack");
+        NormalizedEventDTO caseEvent2 = createEvent("case-spike-2", "NETWORK_EVENT", null, 12_000_000_000L, 8888, "EXPORT", "Attack");
+
+        service.detect(List.of(caseEvent1, caseEvent2));
+
+        // Provider still has exact same count and contents
+        assertThat(provider.getBaselineEvents()).hasSize(baselineCountBefore);
+        assertThat(provider.getBaselineEvents()).extracting(NormalizedEventDTO::getEventId)
+                .doesNotContain("case-spike-1", "case-spike-2");
+    }
+
+    @Test
+    @DisplayName("16. Unfitted model safely returns empty findings without exception")
+    void testUnfittedModelReturnsEmptyFindingsSafely() {
+        service.resetModel();
+        assertThat(service.isFitted()).isFalse();
+
+        List<NormalizedEventDTO> caseEvents = List.of(
+                createEvent("case-1", "NETWORK_EVENT", null, 9_000_000_000L, 4444, "EXPORT", "Suspicious")
+        );
+
+        List<AnomalyFindingDTO> findings = service.detect(caseEvents);
+        assertThat(findings).isNotNull().isEmpty();
+    }
+
+    @Test
+    @DisplayName("17. Attack-dominant case batch is correctly flagged when fitted on normal baseline")
+    void testAttackDominantCaseBatchIsCorrectlyFlaggedWhenFittedOnNormalBaseline() {
+        // Legitimate baseline representing typical business HTTPS traffic
+        List<NormalizedEventDTO> normalBaseline = createStandardBaseline(25);
+        service.fit(normalBaseline);
+
+        // Case batch contains 100% attack events (5 massive exfiltrations)
+        List<NormalizedEventDTO> attackCase = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            attackCase.add(createEvent(
+                    "attack-" + i,
+                    "NETWORK_EVENT",
+                    LocalDateTime.of(2026, 10, 26, 2, i, 0),
+                    8_000_000_000L + (i * 100_000_000L),
+                    4444 + i,
+                    "EXPORT",
+                    "Data exfiltration incident"
+            ));
+        }
+
+        List<AnomalyFindingDTO> findings = service.detect(attackCase);
+
+        // All 5 attack events should be successfully identified because the baseline defines normality
+        assertThat(findings).isNotEmpty();
+        assertThat(findings).extracting(AnomalyFindingDTO::getEventId)
+                .contains("attack-0", "attack-1", "attack-2", "attack-3", "attack-4");
     }
 }

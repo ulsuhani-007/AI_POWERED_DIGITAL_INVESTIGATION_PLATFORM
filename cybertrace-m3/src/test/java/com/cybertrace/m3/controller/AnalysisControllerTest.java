@@ -3,36 +3,54 @@ package com.cybertrace.m3.controller;
 import com.cybertrace.m3.model.*;
 import com.cybertrace.m3.service.AnalysisService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AnalysisController.class)
 class AnalysisControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
     private ObjectMapper objectMapper;
+    private StubAnalysisService stubAnalysisService;
 
-    @MockBean
-    private AnalysisService analysisService;
+    private static class StubAnalysisService extends AnalysisService {
+        AnalysisReportDTO reportToReturn;
+        List<NormalizedEventDTO> lastReceivedEvents;
+
+        @Override
+        public AnalysisReportDTO analyze(List<NormalizedEventDTO> events) {
+            this.lastReceivedEvents = events;
+            if (reportToReturn != null) {
+                return reportToReturn;
+            }
+            return super.analyze(events);
+        }
+    }
+
+    @BeforeEach
+    void setUp() {
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        stubAnalysisService = new StubAnalysisService();
+        AnalysisController controller = new AnalysisController(stubAnalysisService);
+        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+    }
 
     private NormalizedEventDTO createEvent(String eventId, String type, LocalDateTime timestamp, Long bytes, Integer port) {
         return NormalizedEventDTO.builder()
@@ -86,7 +104,7 @@ class AnalysisControllerTest {
         NormalizedEventDTO event = createEvent("ev-001", "NETWORK_EVENT", null, 1500L, 443);
         AnalysisReportDTO report = createSampleReport(1, 1);
 
-        when(analysisService.analyze(any())).thenReturn(report);
+        stubAnalysisService.reportToReturn = report;
 
         mockMvc.perform(post("/api/v1/analysis/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,7 +114,7 @@ class AnalysisControllerTest {
                 .andExpect(jsonPath("$.total_events").value(1))
                 .andExpect(jsonPath("$.total_anomalies").value(1));
 
-        verify(analysisService).analyze(any());
+        assertThat(stubAnalysisService.lastReceivedEvents).isNotNull();
     }
 
     @Test
@@ -110,7 +128,7 @@ class AnalysisControllerTest {
                 .summary("Overall Analysis:\n0 events analyzed across the timeline; 0 anomalies identified.\n\nInvestigation Conclusion:\nNo anomalies detected.")
                 .build();
 
-        when(analysisService.analyze(any())).thenReturn(emptyReport);
+        stubAnalysisService.reportToReturn = emptyReport;
 
         mockMvc.perform(post("/api/v1/analysis/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -132,7 +150,7 @@ class AnalysisControllerTest {
                 .summary("No anomalies detected.")
                 .build();
 
-        when(analysisService.analyze(any())).thenReturn(emptyReport);
+        stubAnalysisService.reportToReturn = emptyReport;
 
         mockMvc.perform(post("/api/v1/analysis/analyze")
                         .contentType(MediaType.APPLICATION_JSON))
@@ -152,7 +170,7 @@ class AnalysisControllerTest {
         );
 
         AnalysisReportDTO report = createSampleReport(4, 1);
-        when(analysisService.analyze(any())).thenReturn(report);
+        stubAnalysisService.reportToReturn = report;
 
         mockMvc.perform(post("/api/v1/analysis/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -165,7 +183,7 @@ class AnalysisControllerTest {
     @DisplayName("5. Response contains total_events")
     void testResponseContainsTotalEvents() throws Exception {
         AnalysisReportDTO report = createSampleReport(15, 0);
-        when(analysisService.analyze(any())).thenReturn(report);
+        stubAnalysisService.reportToReturn = report;
 
         mockMvc.perform(post("/api/v1/analysis/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -178,7 +196,7 @@ class AnalysisControllerTest {
     @DisplayName("6. Response contains total_anomalies")
     void testResponseContainsTotalAnomalies() throws Exception {
         AnalysisReportDTO report = createSampleReport(15, 3);
-        when(analysisService.analyze(any())).thenReturn(report);
+        stubAnalysisService.reportToReturn = report;
 
         mockMvc.perform(post("/api/v1/analysis/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -191,7 +209,7 @@ class AnalysisControllerTest {
     @DisplayName("7. Response contains findings array with accurate field contract")
     void testResponseContainsFindingsArray() throws Exception {
         AnalysisReportDTO report = createSampleReport(10, 1);
-        when(analysisService.analyze(any())).thenReturn(report);
+        stubAnalysisService.reportToReturn = report;
 
         mockMvc.perform(post("/api/v1/analysis/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -210,7 +228,7 @@ class AnalysisControllerTest {
     @DisplayName("8. Response contains statistics map")
     void testResponseContainsStatistics() throws Exception {
         AnalysisReportDTO report = createSampleReport(10, 1);
-        when(analysisService.analyze(any())).thenReturn(report);
+        stubAnalysisService.reportToReturn = report;
 
         mockMvc.perform(post("/api/v1/analysis/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -226,7 +244,7 @@ class AnalysisControllerTest {
     @DisplayName("9. Response contains generated forensic summary")
     void testResponseContainsGeneratedSummary() throws Exception {
         AnalysisReportDTO report = createSampleReport(10, 1);
-        when(analysisService.analyze(any())).thenReturn(report);
+        stubAnalysisService.reportToReturn = report;
 
         mockMvc.perform(post("/api/v1/analysis/analyze")
                         .contentType(MediaType.APPLICATION_JSON)

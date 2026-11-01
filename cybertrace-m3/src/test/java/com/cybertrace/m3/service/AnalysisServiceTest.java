@@ -10,7 +10,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 
 class AnalysisServiceTest {
 
@@ -248,11 +247,6 @@ class AnalysisServiceTest {
     @Test
     @DisplayName("10. Exact duplicate findings from detectors are safely deduplicated")
     void testDuplicateFindingsAreRemoved() {
-        // Mock a detector that accidentally returns duplicate findings
-        BruteForceDetectionService mockBf = mock(BruteForceDetectionService.class);
-        NetworkVolumeDetectionService mockNet = mock(NetworkVolumeDetectionService.class);
-        OffHoursDetectionService mockOff = mock(OffHoursDetectionService.class);
-
         AnomalyFindingDTO finding = AnomalyFindingDTO.builder()
                 .eventId("ev-dup")
                 .timestamp(LocalDateTime.of(2026, 10, 26, 10, 0, 0))
@@ -264,12 +258,17 @@ class AnalysisServiceTest {
                 .detectionMethod("RULE_BASED")
                 .build();
 
-        // Returning the exact same finding twice
-        when(mockBf.detect(any())).thenReturn(List.of(finding, finding));
-        when(mockNet.detect(any())).thenReturn(Collections.emptyList());
-        when(mockOff.detect(any())).thenReturn(Collections.emptyList());
+        BruteForceDetectionService stubBf = new BruteForceDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return List.of(finding, finding); }
+        };
+        NetworkVolumeDetectionService stubNet = new NetworkVolumeDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return Collections.emptyList(); }
+        };
+        OffHoursDetectionService stubOff = new OffHoursDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return Collections.emptyList(); }
+        };
 
-        AnalysisService customService = new AnalysisService(mockBf, mockNet, mockOff);
+        AnalysisService customService = new AnalysisService(stubBf, stubNet, stubOff);
 
         List<NormalizedEventDTO> dummyEvents = List.of(createLogin("ev-dup", "u", "ip", LocalDateTime.now(), false, "src"));
         AnalysisReportDTO report = customService.analyze(dummyEvents);
@@ -357,11 +356,14 @@ class AnalysisServiceTest {
     @Test
     @DisplayName("18. Machine learning findings appear in the unified report")
     void testMachineLearningFindingsAppearInUnifiedReport() {
-        List<NormalizedEventDTO> events = new ArrayList<>();
-        for (int i = 0; i < 15; i++) {
-            events.add(createNetwork("net-" + i, (long) (1000 + (i * 10)),
+        List<NormalizedEventDTO> baseline = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            baseline.add(createNetwork("net-" + i, (long) (1000 + (i * 10)),
                     LocalDateTime.of(2026, 10, 26, 11, i, 0), "ev-net"));
         }
+        analysisService.getMachineLearningService().fit(baseline);
+
+        List<NormalizedEventDTO> events = new ArrayList<>(baseline);
         events.add(createNetwork("ml-spike", 10_000_000_000L,
                 LocalDateTime.of(2026, 10, 26, 11, 30, 0), "ev-net"));
 
@@ -381,6 +383,14 @@ class AnalysisServiceTest {
     @DisplayName("19. ML findings coexist with rule-based findings across all four detectors")
     void testMachineLearningCoexistsWithRuleBasedFindings() {
         LocalDateTime baseTime = LocalDateTime.of(2026, 10, 26, 10, 0, 0);
+
+        // Pre-fit ML service with historical baseline network traffic
+        List<NormalizedEventDTO> baseline = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            baseline.add(createNetwork("base-net-" + i, (long) (1200 + (i * 20)), baseTime.plusMinutes(20 + i), "ev-net"));
+        }
+        analysisService.getMachineLearningService().fit(baseline);
+
         List<NormalizedEventDTO> events = new ArrayList<>();
 
         // 1. 5 failed logins for brute force (BRUTE_FORCE)
@@ -417,11 +427,6 @@ class AnalysisServiceTest {
     @Test
     @DisplayName("20. Same event can contain different anomaly types (e.g. OFF_HOURS and MACHINE_LEARNING)")
     void testSameEventCanContainDifferentAnomalyTypes() {
-        BruteForceDetectionService mockBf = mock(BruteForceDetectionService.class);
-        NetworkVolumeDetectionService mockNet = mock(NetworkVolumeDetectionService.class);
-        OffHoursDetectionService mockOff = mock(OffHoursDetectionService.class);
-        MachineLearningAnomalyDetectionService mockMl = mock(MachineLearningAnomalyDetectionService.class);
-
         LocalDateTime eventTime = LocalDateTime.of(2026, 10, 26, 2, 30, 0);
         String eventId = "shared-event-001";
 
@@ -447,12 +452,20 @@ class AnalysisServiceTest {
                 .detectionMethod("Smile 3.1.0 Isolation Forest")
                 .build();
 
-        when(mockBf.detect(any())).thenReturn(Collections.emptyList());
-        when(mockNet.detect(any())).thenReturn(Collections.emptyList());
-        when(mockOff.detect(any())).thenReturn(List.of(offHoursFinding));
-        when(mockMl.detect(any())).thenReturn(List.of(mlFinding));
+        BruteForceDetectionService stubBf = new BruteForceDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return Collections.emptyList(); }
+        };
+        NetworkVolumeDetectionService stubNet = new NetworkVolumeDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return Collections.emptyList(); }
+        };
+        OffHoursDetectionService stubOff = new OffHoursDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return List.of(offHoursFinding); }
+        };
+        MachineLearningAnomalyDetectionService stubMl = new MachineLearningAnomalyDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return List.of(mlFinding); }
+        };
 
-        AnalysisService customService = new AnalysisService(mockBf, mockNet, mockOff, mockMl);
+        AnalysisService customService = new AnalysisService(stubBf, stubNet, stubOff, stubMl);
 
         List<NormalizedEventDTO> events = List.of(
                 createFileAccess(eventId, "user", "file.dat", eventTime, "src-file")
@@ -472,11 +485,6 @@ class AnalysisServiceTest {
     @Test
     @DisplayName("21. Exact duplicate ML findings are safely deduplicated")
     void testExactDuplicateMlFindingsAreRemoved() {
-        BruteForceDetectionService mockBf = mock(BruteForceDetectionService.class);
-        NetworkVolumeDetectionService mockNet = mock(NetworkVolumeDetectionService.class);
-        OffHoursDetectionService mockOff = mock(OffHoursDetectionService.class);
-        MachineLearningAnomalyDetectionService mockMl = mock(MachineLearningAnomalyDetectionService.class);
-
         LocalDateTime eventTime = LocalDateTime.of(2026, 10, 26, 14, 0, 0);
         String eventId = "dup-ml-event";
 
@@ -491,13 +499,20 @@ class AnalysisServiceTest {
                 .detectionMethod("Smile 3.1.0 Isolation Forest")
                 .build();
 
-        when(mockBf.detect(any())).thenReturn(Collections.emptyList());
-        when(mockNet.detect(any())).thenReturn(Collections.emptyList());
-        when(mockOff.detect(any())).thenReturn(Collections.emptyList());
-        // Return exact same finding twice
-        when(mockMl.detect(any())).thenReturn(List.of(mlFinding, mlFinding));
+        BruteForceDetectionService stubBf = new BruteForceDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return Collections.emptyList(); }
+        };
+        NetworkVolumeDetectionService stubNet = new NetworkVolumeDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return Collections.emptyList(); }
+        };
+        OffHoursDetectionService stubOff = new OffHoursDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return Collections.emptyList(); }
+        };
+        MachineLearningAnomalyDetectionService stubMl = new MachineLearningAnomalyDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return List.of(mlFinding, mlFinding); }
+        };
 
-        AnalysisService customService = new AnalysisService(mockBf, mockNet, mockOff, mockMl);
+        AnalysisService customService = new AnalysisService(stubBf, stubNet, stubOff, stubMl);
         AnalysisReportDTO report = customService.analyze(List.of(createNetwork(eventId, 5000000L, eventTime, "src")));
 
         assertThat(report.getTotalAnomalies()).isEqualTo(1);
@@ -507,11 +522,6 @@ class AnalysisServiceTest {
     @Test
     @DisplayName("22. Chronological ordering preserved when ML findings are present")
     void testChronologicalOrderingWithMlFindings() {
-        BruteForceDetectionService mockBf = mock(BruteForceDetectionService.class);
-        NetworkVolumeDetectionService mockNet = mock(NetworkVolumeDetectionService.class);
-        OffHoursDetectionService mockOff = mock(OffHoursDetectionService.class);
-        MachineLearningAnomalyDetectionService mockMl = mock(MachineLearningAnomalyDetectionService.class);
-
         LocalDateTime tEarly = LocalDateTime.of(2026, 10, 26, 8, 0, 0);
         LocalDateTime tMid = LocalDateTime.of(2026, 10, 26, 12, 0, 0);
         LocalDateTime tLate = LocalDateTime.of(2026, 10, 26, 20, 0, 0);
@@ -537,13 +547,20 @@ class AnalysisServiceTest {
                 .severity(AnomalySeverity.CRITICAL)
                 .build();
 
-        // Pass out of chronological order
-        when(mockBf.detect(any())).thenReturn(Collections.emptyList());
-        when(mockNet.detect(any())).thenReturn(List.of(lateNet));
-        when(mockOff.detect(any())).thenReturn(List.of(earlyOffHours));
-        when(mockMl.detect(any())).thenReturn(List.of(midMl));
+        BruteForceDetectionService stubBf = new BruteForceDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return Collections.emptyList(); }
+        };
+        NetworkVolumeDetectionService stubNet = new NetworkVolumeDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return List.of(lateNet); }
+        };
+        OffHoursDetectionService stubOff = new OffHoursDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return List.of(earlyOffHours); }
+        };
+        MachineLearningAnomalyDetectionService stubMl = new MachineLearningAnomalyDetectionService() {
+            @Override public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) { return List.of(midMl); }
+        };
 
-        AnalysisService customService = new AnalysisService(mockBf, mockNet, mockOff, mockMl);
+        AnalysisService customService = new AnalysisService(stubBf, stubNet, stubOff, stubMl);
         AnalysisReportDTO report = customService.analyze(List.of(
                 createNetwork("ev-late", 1000L, tLate, "src"),
                 createNetwork("ev-mid", 1000L, tMid, "src"),

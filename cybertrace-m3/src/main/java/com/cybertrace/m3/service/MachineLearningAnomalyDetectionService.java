@@ -7,27 +7,26 @@ import com.cybertrace.m3.model.NormalizedEventDTO;
 import com.cybertrace.m3.util.EventStatusExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import smile.anomaly.IsolationForest;
+import smile.anomaly.IsolationTree;
 import smile.math.MathEx;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
  * Machine Learning Anomaly Detection Service utilizing Smile's Isolation Forest algorithm.
- * Evaluates multi-dimensional forensic feature vectors derived from M2 normalized events:
- * - Hour of day (temporal distribution)
- * - Event type (categorical baseline)
- * - Data transfer volume (log-scaled byte baseline)
- * - Destination port (normalized port baseline)
- * - Operation outcome (login/operation failure indicator)
- * - Action category (categorical action weight)
  *
- * Training and inference are performed directly on the supplied event batch without external fabrication.
+ * Architecture separates:
+ * 1. Model Training / Fitting: Performed strictly on historical/legitimate baseline events.
+ * 2. Anomaly Scoring: Performed strictly on incoming case investigation events evaluated
+ *    against the pre-fitted model.
+ *
+ * Case events are NEVER used to train the model, and are NEVER appended to the baseline.
  */
 @Service
 public class MachineLearningAnomalyDetectionService {
@@ -40,18 +39,45 @@ public class MachineLearningAnomalyDetectionService {
     private final double subsample;
     private final long randomSeed;
     private final int minBatchSize;
+    private HistoricalBaselineProvider baselineProvider;
+
+    /**
+     * Immutable snapshot of a trained Isolation Forest model along with
+     * the baseline feature statistics and active column mapping.
+     */
+    public record TrainedModel(
+            IsolationForest forest,
+            double[] baselineMeans,
+            double[] baselineStdDevs,
+            List<Integer> activeCols
+    ) {}
+
+    private volatile TrainedModel trainedModel;
 
     public MachineLearningAnomalyDetectionService() {
-        this(0.65, 100, 0.7, 42L, 5);
+        this(new InMemoryHistoricalBaselineProvider(), 0.60, 100, 0.7, 42L, 5);
     }
 
     public MachineLearningAnomalyDetectionService(
-            @Value("${cybertrace.m3.machine-learning.score-threshold:0.65}") double scoreThreshold,
+            @Value("${cybertrace.m3.machine-learning.score-threshold:0.60}") double scoreThreshold,
             @Value("${cybertrace.m3.machine-learning.num-trees:100}") int numTrees,
             @Value("${cybertrace.m3.machine-learning.subsample:0.7}") double subsample,
             @Value("${cybertrace.m3.machine-learning.random-seed:42}") long randomSeed,
             @Value("${cybertrace.m3.machine-learning.min-batch-size:5}") int minBatchSize
     ) {
+        this(new InMemoryHistoricalBaselineProvider(), scoreThreshold, numTrees, subsample, randomSeed, minBatchSize);
+    }
+
+    @Autowired
+    public MachineLearningAnomalyDetectionService(
+            HistoricalBaselineProvider baselineProvider,
+            @Value("${cybertrace.m3.machine-learning.score-threshold:0.60}") double scoreThreshold,
+            @Value("${cybertrace.m3.machine-learning.num-trees:100}") int numTrees,
+            @Value("${cybertrace.m3.machine-learning.subsample:0.7}") double subsample,
+            @Value("${cybertrace.m3.machine-learning.random-seed:42}") long randomSeed,
+            @Value("${cybertrace.m3.machine-learning.min-batch-size:5}") int minBatchSize
+    ) {
+        this.baselineProvider = baselineProvider != null ? baselineProvider : new InMemoryHistoricalBaselineProvider();
         this.scoreThreshold = scoreThreshold;
         this.numTrees = numTrees;
         this.subsample = subsample;
@@ -79,38 +105,77 @@ public class MachineLearningAnomalyDetectionService {
         return minBatchSize;
     }
 
+    public HistoricalBaselineProvider getBaselineProvider() {
+        return baselineProvider;
+    }
+
+    public void setBaselineProvider(HistoricalBaselineProvider baselineProvider) {
+        this.baselineProvider = baselineProvider != null ? baselineProvider : new InMemoryHistoricalBaselineProvider();
+    }
+
     /**
-     * Detects multivariate forensic anomalies in the supplied normalized events using Isolation Forest.
+     * Checks whether an Isolation Forest model has been fitted and is ready for scoring.
      *
-     * @param events input list of normalized events (unmutated)
-     * @return list of identified {@link AnomalyFindingDTO} objects
+     * @return true if fitted, false otherwise
      */
-    public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) {
-        // 1. Guard against null or insufficient batch size
-        if (events == null || events.isEmpty()) {
-            return Collections.emptyList();
+    public boolean isFitted() {
+        return trainedModel != null;
+    }
+
+    /**
+     * Clears the current trained model state.
+     */
+    public void resetModel() {
+        this.trainedModel = null;
+    }
+
+    /**
+     * Convenience method to register legitimate baseline events and immediately fit the model.
+     *
+     * @param baselineEvents legitimate historical baseline events
+     * @return true if fitting succeeded, false otherwise
+     */
+    public boolean setBaseline(List<NormalizedEventDTO> baselineEvents) {
+        if (this.baselineProvider instanceof InMemoryHistoricalBaselineProvider inMemory) {
+            inMemory.setBaselineEvents(baselineEvents);
+        }
+        return fit(baselineEvents);
+    }
+
+    /**
+     * Fits the Isolation Forest model strictly using the provided legitimate/historical baseline events.
+     * Incoming case investigation events MUST NOT be passed to this method.
+     *
+     * @param baselineEvents list of legitimate historical evidence events (unmutated)
+     * @return true if training succeeded and model was fitted, false if input was insufficient
+     */
+    public synchronized boolean fit(List<NormalizedEventDTO> baselineEvents) {
+        if (baselineEvents == null || baselineEvents.isEmpty()) {
+            log.debug("Baseline events are null or empty; cannot fit Isolation Forest");
+            this.trainedModel = null;
+            return false;
         }
 
-        // Filter out null event objects without mutating the input list
-        List<NormalizedEventDTO> validEvents = events.stream()
+        List<NormalizedEventDTO> validBaseline = baselineEvents.stream()
                 .filter(Objects::nonNull)
                 .toList();
 
-        if (validEvents.size() < minBatchSize) {
-            log.debug("Batch size {} is below minimum batch size {}; skipping ML anomaly detection",
-                    validEvents.size(), minBatchSize);
-            return Collections.emptyList();
+        if (validBaseline.size() < minBatchSize) {
+            log.debug("Baseline size {} is below minimum batch size {}; skipping model training",
+                    validBaseline.size(), minBatchSize);
+            this.trainedModel = null;
+            return false;
         }
 
-        int n = validEvents.size();
+        int n = validBaseline.size();
         final int featureCount = 6;
         double[][] featureMatrix = new double[n][featureCount];
 
         for (int i = 0; i < n; i++) {
-            featureMatrix[i] = extractFeatures(validEvents.get(i));
+            featureMatrix[i] = extractFeatures(validBaseline.get(i));
         }
 
-        // 2. Compute column statistics (means and standard deviations) for explainability
+        // Compute baseline column statistics for normalization and explainability
         double[] colMeans = new double[featureCount];
         double[] colStdDevs = new double[featureCount];
 
@@ -129,7 +194,7 @@ public class MachineLearningAnomalyDetectionService {
             colStdDevs[j] = Math.sqrt(sumSqDiff / (n > 1 ? (n - 1) : 1));
         }
 
-        // 3. Identify active features with non-zero variance
+        // Identify active features with non-zero variance in baseline
         List<Integer> activeCols = new ArrayList<>();
         for (int j = 0; j < featureCount; j++) {
             if (colStdDevs[j] > 1e-6) {
@@ -138,8 +203,9 @@ public class MachineLearningAnomalyDetectionService {
         }
 
         if (activeCols.isEmpty()) {
-            log.debug("All events in batch are identical; zero anomalies detected");
-            return Collections.emptyList();
+            log.debug("All baseline events have zero variance; cannot fit Isolation Forest");
+            this.trainedModel = null;
+            return false;
         }
 
         int activeDim = activeCols.size();
@@ -150,9 +216,7 @@ public class MachineLearningAnomalyDetectionService {
             }
         }
 
-        // 4. Train Isolation Forest deterministically with fixed random seed
-        IsolationForest forest;
-        double[] anomalyScores;
+        // Train Isolation Forest deterministically on baseline
         int maxDepth = (int) Math.max(1, Math.ceil(MathEx.log2(n)));
         synchronized (MachineLearningAnomalyDetectionService.class) {
             MathEx.setSeed(randomSeed);
@@ -160,38 +224,103 @@ public class MachineLearningAnomalyDetectionService {
             if (k < 1) k = 1;
             if (k > n) k = n;
 
-            smile.anomaly.IsolationTree[] trees = new smile.anomaly.IsolationTree[numTrees];
+            IsolationTree[] trees = new IsolationTree[numTrees];
             for (int t = 0; t < numTrees; t++) {
                 int[] perm = MathEx.permutate(n);
                 List<double[]> sample = new ArrayList<>(k);
                 for (int s = 0; s < k; s++) {
                     sample.add(activeMatrix[perm[s]]);
                 }
-                trees[t] = new smile.anomaly.IsolationTree(sample, maxDepth, 0);
+                trees[t] = new IsolationTree(sample, maxDepth, 0);
             }
-            forest = new IsolationForest(n, 0, trees);
-            anomalyScores = forest.score(activeMatrix);
+            IsolationForest forest = new IsolationForest(n, 0, trees);
+            this.trainedModel = new TrainedModel(forest, colMeans, colStdDevs, activeCols);
         }
 
-        // 5. Identify anomalous events exceeding threshold
+        log.debug("Fitted Isolation Forest on {} baseline events (features={}, trees={}, seed={})",
+                n, activeDim, numTrees, randomSeed);
+        return true;
+    }
+
+    /**
+     * Scores incoming case events against the fitted baseline Isolation Forest model.
+     * Case events are strictly evaluated against the baseline model; they are NEVER
+     * used to train the model and NEVER appended to the baseline.
+     *
+     * @param caseEvents input list of case events to evaluate (unmutated)
+     * @return list of identified {@link AnomalyFindingDTO} objects
+     */
+    public List<AnomalyFindingDTO> score(List<NormalizedEventDTO> caseEvents) {
+        if (caseEvents == null || caseEvents.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        TrainedModel model = this.trainedModel;
+        if (model == null) {
+            // Lazy-fit from baseline provider if available
+            if (baselineProvider != null) {
+                List<NormalizedEventDTO> providerEvents = baselineProvider.getBaselineEvents();
+                if (providerEvents != null && !providerEvents.isEmpty()) {
+                    fit(providerEvents);
+                    model = this.trainedModel;
+                }
+            }
+        }
+
+        if (model == null) {
+            log.debug("Isolation Forest has no fitted baseline model; returning zero ML findings");
+            return Collections.emptyList();
+        }
+
+        List<NormalizedEventDTO> validEvents = caseEvents.stream()
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (validEvents.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int m = validEvents.size();
+        List<Integer> activeCols = model.activeCols();
+        int activeDim = activeCols.size();
+
+        double[][] caseFeatureMatrix = new double[m][6];
+        double[][] caseActiveMatrix = new double[m][activeDim];
+
+        for (int i = 0; i < m; i++) {
+            caseFeatureMatrix[i] = extractFeatures(validEvents.get(i));
+            for (int d = 0; d < activeDim; d++) {
+                caseActiveMatrix[i][d] = caseFeatureMatrix[i][activeCols.get(d)];
+            }
+        }
+
+        // Score case events strictly against the pre-fitted baseline forest
+        double[] anomalyScores = model.forest().score(caseActiveMatrix);
+
         List<AnomalyFindingDTO> findings = new ArrayList<>();
         Set<String> seenEventIds = new HashSet<>();
 
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < m; i++) {
             double rawScore = anomalyScores[i];
-            log.debug("Event [{}] score={}", validEvents.get(i).getEventId(), rawScore);
+            log.debug("Case event [{}] anomaly score={}", validEvents.get(i).getEventId(), rawScore);
+
             if (rawScore >= scoreThreshold) {
                 NormalizedEventDTO event = validEvents.get(i);
                 String eventId = event.getEventId();
 
                 if (eventId != null && !seenEventIds.add(eventId)) {
-                    // Prevent duplicate findings for identical event IDs
                     continue;
                 }
 
                 double normalizedScore = roundScore(rawScore);
                 AnomalySeverity severity = determineSeverity(rawScore);
-                String reason = buildExplainableReason(event, featureMatrix[i], colMeans, colStdDevs, rawScore);
+                String reason = buildExplainableReason(
+                        event,
+                        caseFeatureMatrix[i],
+                        model.baselineMeans(),
+                        model.baselineStdDevs(),
+                        rawScore
+                );
 
                 AnomalyFindingDTO finding = AnomalyFindingDTO.builder()
                         .eventId(eventId)
@@ -209,6 +338,30 @@ public class MachineLearningAnomalyDetectionService {
         }
 
         return findings;
+    }
+
+    /**
+     * Primary detection entry point called by {@link AnalysisService}.
+     * Evaluates incoming case events against the fitted baseline model without retraining.
+     *
+     * @param events incoming case investigation events (unmutated)
+     * @return list of identified findings
+     */
+    public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> events) {
+        return score(events);
+    }
+
+    /**
+     * Fits the model on the supplied baseline events, then scores the incoming case events.
+     * Case events remain completely separated from baseline events.
+     *
+     * @param caseEvents incoming case investigation events
+     * @param baselineEvents legitimate historical baseline events
+     * @return list of findings detected in caseEvents
+     */
+    public List<AnomalyFindingDTO> detect(List<NormalizedEventDTO> caseEvents, List<NormalizedEventDTO> baselineEvents) {
+        fit(baselineEvents);
+        return score(caseEvents);
     }
 
     /**
@@ -275,7 +428,7 @@ public class MachineLearningAnomalyDetectionService {
     }
 
     /**
-     * Determines the most anomalous feature dimension relative to the batch distribution
+     * Determines the most anomalous feature dimension relative to the baseline distribution
      * and produces an explainable forensic description.
      */
     private String buildExplainableReason(
@@ -307,9 +460,9 @@ public class MachineLearningAnomalyDetectionService {
         switch (maxFeatureIdx) {
             case 0 -> {
                 int hour = (event.getTimestamp() != null) ? event.getTimestamp().getHour() : (int) features[0];
-                explanation = String.format("unusual timestamp hour (%02d:00) deviating from batch baseline", hour);
+                explanation = String.format("unusual timestamp hour (%02d:00) deviating from baseline", hour);
             }
-            case 1 -> explanation = String.format("rare or atypical event type '%s' in batch profile",
+            case 1 -> explanation = String.format("rare or atypical event type '%s' deviating from baseline profile",
                     event.getEventType() != null ? event.getEventType() : "UNKNOWN");
             case 2 -> {
                 Long bytes = event.getBytes();
@@ -319,7 +472,7 @@ public class MachineLearningAnomalyDetectionService {
             case 3 -> explanation = String.format("unusual port %s deviating from typical network connections",
                     event.getPort() != null ? event.getPort() : "N/A");
             case 4 -> explanation = "failed authentication attempt identified as statistical outlier";
-            case 5 -> explanation = String.format("unusual forensic action '%s' in batch activity",
+            case 5 -> explanation = String.format("unusual forensic action '%s' deviating from baseline activity",
                     event.getAction() != null ? event.getAction() : "N/A");
             default -> explanation = "multivariate anomaly detected across combined forensic features";
         }
