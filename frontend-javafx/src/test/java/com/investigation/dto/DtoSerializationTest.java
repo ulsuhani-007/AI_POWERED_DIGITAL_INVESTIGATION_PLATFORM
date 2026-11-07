@@ -88,4 +88,123 @@ class DtoSerializationTest {
         assertEquals(8, dto.getTotalAnomalies());
         assertEquals("AI summary text", dto.getSummary());
     }
+
+    @Test
+    void testEventDtoM1M2ContractCompatibility() throws Exception {
+        // M1 / M2 sends event_id and local datetime without trailing Z
+        String json = """
+                {
+                    "event_id": "evt-m1-42",
+                    "case_id": "case-100",
+                    "source_evidence_id": "ev-50",
+                    "timestamp": "2026-10-26T10:30:15",
+                    "source": "firewall.log",
+                    "event_type": "PORT_SCAN",
+                    "user": "root",
+                    "ip_address": "192.168.1.100",
+                    "device": "SRV-01",
+                    "success": false,
+                    "bytes_transferred": 1024,
+                    "description": "Port scan detected"
+                }
+                """;
+
+        EventDto dto = objectMapper.readValue(json, EventDto.class);
+        assertEquals("evt-m1-42", dto.getId());
+        assertEquals("case-100", dto.getCaseId());
+        assertEquals("ev-50", dto.getEvidenceId());
+        assertNotNull(dto.getTimestamp());
+        assertEquals("PORT_SCAN", dto.getEventType());
+        assertEquals("192.168.1.100", dto.getIpAddress());
+        assertEquals(1024L, dto.getBytes());
+    }
+
+    @Test
+    void testFindingDtoM3ContractCompatibility() throws Exception {
+        // M3 sends anomaly_type, event_id, detection_method, and local datetime
+        String json = """
+                {
+                    "event_id": "evt-m1-42",
+                    "timestamp": "2026-10-26T10:30:15",
+                    "anomaly_type": "LARGE_DATA_TRANSFER",
+                    "reason": "Exceeded statistical baseline threshold",
+                    "severity": "HIGH",
+                    "score": 0.88,
+                    "detection_method": "Isolation Forest"
+                }
+                """;
+
+        FindingDto dto = objectMapper.readValue(json, FindingDto.class);
+        assertEquals("evt-m1-42", dto.getEventId());
+        assertEquals("fnd-evt-m1-42", dto.getId());
+        assertEquals("LARGE_DATA_TRANSFER", dto.getEventType());
+        assertEquals("HIGH", dto.getSeverity());
+        assertEquals(0.88, dto.getScore(), 0.001);
+        assertNotNull(dto.getTimestamp());
+    }
+
+    @Test
+    void testCaseDtoAndEvidenceDtoFlexibleDates() throws Exception {
+        String caseJson = """
+                {
+                    "id": "case-uuid-1",
+                    "caseNumber": "CASE-2026-001",
+                    "title": "Operation Nightfall",
+                    "createdAt": "2026-10-26T09:00:00",
+                    "updatedAt": "2026-10-26T10:00:00"
+                }
+                """;
+        CaseDto cDto = objectMapper.readValue(caseJson, CaseDto.class);
+        assertEquals("CASE-2026-001", cDto.getCaseNumber());
+        assertNotNull(cDto.getCreatedAt());
+        assertNotNull(cDto.getUpdatedAt());
+
+        String evJson = """
+                {
+                    "id": "ev-uuid-1",
+                    "caseId": "case-uuid-1",
+                    "fileName": "auth.log",
+                    "uploadedAt": "2026-10-26T09:30:00",
+                    "hashSha256": "abcdef123456"
+                }
+                """;
+        EvidenceDto evDto = objectMapper.readValue(evJson, EvidenceDto.class);
+        assertEquals("auth.log", evDto.getFileName());
+        assertNotNull(evDto.getUploadedAt());
+        assertEquals("abcdef123456", evDto.getHashSha256());
+    }
+
+    @Test
+    void testEvidenceDtoUploadedByField() throws Exception {
+        String evJson = """
+                {
+                    "id": "ev-uuid-2",
+                    "caseId": "case-uuid-1",
+                    "fileName": "network.pcap",
+                    "uploadedBy": "forensic_expert",
+                    "hashSha256": "1234567890abcdef"
+                }
+                """;
+        EvidenceDto evDto = objectMapper.readValue(evJson, EvidenceDto.class);
+        assertEquals("forensic_expert", evDto.getUploadedBy());
+    }
+
+    @Test
+    void testUserDtoSerialization() throws Exception {
+        String userJson = """
+                {
+                    "id": "u-admin-123",
+                    "username": "superadmin",
+                    "role": "ADMIN",
+                    "enabled": true,
+                    "createdAt": "2026-10-26T09:00:00Z"
+                }
+                """;
+        UserDto userDto = objectMapper.readValue(userJson, UserDto.class);
+        assertEquals("u-admin-123", userDto.getId());
+        assertEquals("superadmin", userDto.getUsername());
+        assertEquals("ADMIN", userDto.getRole());
+        assertTrue(userDto.isEnabled());
+        assertNotNull(userDto.getCreatedAt());
+    }
 }

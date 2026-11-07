@@ -20,6 +20,7 @@ public class EvidenceModel {
     private String hashSha256;
     private int eventCount;
     private String description;
+    private String uploadedBy;
 
     public EvidenceModel() {
         this.status = EvidenceStatus.UPLOADED;
@@ -29,6 +30,13 @@ public class EvidenceModel {
     public EvidenceModel(String id, String caseId, String fileName, String fileType,
                          long fileSizeBytes, Instant uploadedAt, EvidenceStatus status,
                          String source, String hashSha256, int eventCount, String description) {
+        this(id, caseId, fileName, fileType, fileSizeBytes, uploadedAt, status, source, hashSha256, eventCount, description, null);
+    }
+
+    public EvidenceModel(String id, String caseId, String fileName, String fileType,
+                         long fileSizeBytes, Instant uploadedAt, EvidenceStatus status,
+                         String source, String hashSha256, int eventCount, String description,
+                         String uploadedBy) {
         this.id = id;
         this.caseId = caseId;
         this.fileName = fileName;
@@ -40,6 +48,7 @@ public class EvidenceModel {
         this.hashSha256 = hashSha256;
         this.eventCount = eventCount;
         this.description = description;
+        this.uploadedBy = uploadedBy;
     }
 
     public String getId() { return id; }
@@ -74,6 +83,9 @@ public class EvidenceModel {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getUploadedBy() { return uploadedBy; }
+    public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
 
     public String getFormattedSize() {
         if (fileSizeBytes < 1024) return fileSizeBytes + " B";

@@ -26,6 +26,7 @@ class ViewLoadTest {
     @Test
     void testLoadAllViews() throws Exception {
         String[] views = {
+                "/com/investigation/view/LoginView.fxml",
                 "/com/investigation/view/MainLayout.fxml",
                 "/com/investigation/view/DashboardView.fxml",
                 "/com/investigation/view/CasesView.fxml",
@@ -33,7 +34,8 @@ class ViewLoadTest {
                 "/com/investigation/view/TimelineView.fxml",
                 "/com/investigation/view/GraphView.fxml",
                 "/com/investigation/view/AnomaliesView.fxml",
-                "/com/investigation/view/AiSummaryView.fxml"
+                "/com/investigation/view/AiSummaryView.fxml",
+                "/com/investigation/view/AdminView.fxml"
         };
 
         for (String viewPath : views) {

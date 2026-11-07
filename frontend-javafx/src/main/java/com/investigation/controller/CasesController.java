@@ -21,14 +21,27 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Controller for Cases Management and Case Details view matching the reference design:
+ * - Table view with realistic thumbnails, priority & status badges, and action menus
+ * - Seamless Case Details view with milestone stepper, jump-tabs, and contextual metrics
+ * - Proper JavaFX event handling (listeners, callbacks, sorting, filtering)
+ */
 public class CasesController implements MainLayoutController.Refreshable {
+
+    @FXML private VBox tableViewContainer;
+    @FXML private VBox caseDetailsContainer;
 
     @FXML private TextField searchField;
     @FXML private ComboBox<String> statusFilterComboBox;
+    @FXML private MenuButton sortMenuButton;
+
     @FXML private TableView<CaseModel> casesTable;
+    @FXML private TableColumn<CaseModel, Void> colThumb;
     @FXML private TableColumn<CaseModel, String> colCaseNum;
     @FXML private TableColumn<CaseModel, String> colTitle;
     @FXML private TableColumn<CaseModel, String> colStatus;
@@ -36,20 +49,25 @@ public class CasesController implements MainLayoutController.Refreshable {
     @FXML private TableColumn<CaseModel, String> colInvestigator;
     @FXML private TableColumn<CaseModel, String> colEvidence;
     @FXML private TableColumn<CaseModel, String> colEvents;
+    @FXML private TableColumn<CaseModel, String> colAnomalies;
     @FXML private TableColumn<CaseModel, String> colCreated;
+    @FXML private TableColumn<CaseModel, Void> colActions;
 
-    // Side detail panel
-    @FXML private VBox detailPanel;
-    @FXML private Label detailCaseNumber;
-    @FXML private Label detailTitle;
-    @FXML private Label detailDescription;
-    @FXML private Label detailInvestigator;
-    @FXML private Label detailCreated;
-    @FXML private Label detailUpdated;
-    @FXML private HBox detailBadges;
-    @FXML private Button setActiveButton;
-    @FXML private Button editButton;
-    @FXML private Button deleteButton;
+    // Case Details UI Elements (Panel 4)
+    @FXML private StackPane detailThumbnailContainer;
+    @FXML private Label detailCaseHeaderTitle;
+    @FXML private Label detailCaseDescription;
+    @FXML private HBox detailHeaderBadges;
+    @FXML private Label detailInvestigatorLabel;
+    @FXML private Label detailTotalEvidence;
+    @FXML private Label detailTotalEvents;
+    @FXML private Label detailTotalAnomalies;
+    @FXML private Label detailProgressPercent;
+    @FXML private ProgressBar detailProgressBar;
+    @FXML private Label detailPriorityText;
+    @FXML private Label detailStatusText;
+    @FXML private Label detailUpdatedText;
+    @FXML private Button setActiveBtn;
 
     @FXML private StackPane overlayPane;
 
@@ -80,9 +98,51 @@ public class CasesController implements MainLayoutController.Refreshable {
     }
 
     private void setupTable() {
+        // Thumbnail column
+        colThumb.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                    setGraphic(null);
+                } else {
+                    CaseModel cm = getTableRow().getItem();
+                    setGraphic(UiUtils.createCaseThumbnailView(cm.getCaseNumber(), cm.getTitle(), 48, 32, 4));
+                }
+            }
+        });
+
         colCaseNum.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getCaseNumber()));
         colTitle.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getTitle()));
+        colTitle.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    CaseModel cm = getTableRow().getItem();
+                    if (UiUtils.isHistoricalCase(cm.getCaseNumber())) {
+                        HBox box = new HBox(6);
+                        box.setAlignment(Pos.CENTER_LEFT);
+                        Label titleLbl = new Label(cm.getTitle());
+                        titleLbl.setStyle("-fx-font-weight: 600; -fx-text-fill: #0F172A;");
+                        Label demoLbl = new Label("HISTORICAL DEMO");
+                        demoLbl.setStyle("-fx-background-color: #EEF2FF; -fx-text-fill: #4338CA; -fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 2px 6px; -fx-background-radius: 4px;");
+                        box.getChildren().addAll(titleLbl, demoLbl);
+                        setGraphic(box);
+                        setText(null);
+                    } else {
+                        setText(item);
+                        setStyle("-fx-font-weight: 600; -fx-text-fill: #0F172A;");
+                        setGraphic(null);
+                    }
+                }
+            }
+        });
 
+        // Status badge
         colStatus.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getStatus().getDisplayName()));
         colStatus.setCellFactory(col -> new TableCell<>() {
             @Override
@@ -96,6 +156,7 @@ public class CasesController implements MainLayoutController.Refreshable {
             }
         });
 
+        // Priority badge
         colPriority.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getPriority().getDisplayName()));
         colPriority.setCellFactory(col -> new TableCell<>() {
             @Override
@@ -109,13 +170,56 @@ public class CasesController implements MainLayoutController.Refreshable {
             }
         });
 
-        colInvestigator.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getLeadInvestigator() != null ? d.getValue().getLeadInvestigator() : "Unassigned"));
+        colInvestigator.setCellValueFactory(d -> new SimpleStringProperty(
+                d.getValue().getLeadInvestigator() != null ? d.getValue().getLeadInvestigator() : "Unassigned"
+        ));
+
         colEvidence.setCellValueFactory(d -> new SimpleStringProperty(String.valueOf(d.getValue().getEvidenceCount())));
         colEvents.setCellValueFactory(d -> new SimpleStringProperty(String.valueOf(d.getValue().getEventCount())));
-        colCreated.setCellValueFactory(d -> new SimpleStringProperty(DateTimeUtils.formatShortDate(d.getValue().getCreatedAt())));
+        colAnomalies.setCellValueFactory(d -> new SimpleStringProperty(String.valueOf(d.getValue().getAnomalyCount())));
+
+        colCreated.setCellValueFactory(d -> new SimpleStringProperty(
+                d.getValue().getUpdatedAt() != null ? DateTimeUtils.getRelativeTime(d.getValue().getUpdatedAt()) : DateTimeUtils.formatShortDate(d.getValue().getCreatedAt())
+        ));
+
+        // Actions column with Open Case button
+        colActions.setCellFactory(col -> new TableCell<>() {
+            private final Button openBtn = new Button("Open");
+            {
+                openBtn.setStyle("-fx-background-color: #EFF6FF; -fx-text-fill: #2563EB; -fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 3px 10px; -fx-background-radius: 4px; -fx-border-color: #BFDBFE; -fx-border-radius: 4px; -fx-cursor: hand;");
+                openBtn.setOnAction(e -> {
+                    CaseModel cm = getTableRow().getItem();
+                    if (cm != null) {
+                        openCaseDetails(cm);
+                    }
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                    setGraphic(null);
+                } else {
+                    setGraphic(openBtn);
+                }
+            }
+        });
+
+        // Double click row opens details
+        casesTable.setRowFactory(tv -> {
+            TableRow<CaseModel> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (!row.isEmpty() && event.getClickCount() == 2) {
+                    openCaseDetails(row.getItem());
+                }
+            });
+            return row;
+        });
 
         casesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-            showCaseDetails(newVal);
+            if (newVal != null) {
+                this.selectedCase = newVal;
+            }
         });
 
         filteredData = new FilteredList<>(masterData, p -> true);
@@ -130,6 +234,12 @@ public class CasesController implements MainLayoutController.Refreshable {
 
         searchField.textProperty().addListener((obs, oldVal, newVal) -> updatePredicate());
         statusFilterComboBox.valueProperty().addListener((obs, oldVal, newVal) -> updatePredicate());
+    }
+
+    public void applySearchFilter(String query) {
+        if (searchField != null) {
+            searchField.setText(query);
+        }
     }
 
     private void updatePredicate() {
@@ -148,6 +258,17 @@ public class CasesController implements MainLayoutController.Refreshable {
                     (c.getTitle() != null && c.getTitle().toLowerCase().contains(query)) ||
                     (c.getDescription() != null && c.getDescription().toLowerCase().contains(query)) ||
                     (c.getLeadInvestigator() != null && c.getLeadInvestigator().toLowerCase().contains(query));
+        });
+    }
+
+    // Sorting actions
+    @FXML private void onSortByNumber() { masterData.sort(Comparator.comparing(CaseModel::getCaseNumber)); }
+    @FXML private void onSortByTitle() { masterData.sort(Comparator.comparing(CaseModel::getTitle)); }
+    @FXML private void onSortByPriority() { masterData.sort(Comparator.comparing(CaseModel::getPriority)); }
+    @FXML private void onSortByDate() {
+        masterData.sort((a, b) -> {
+            if (a.getCreatedAt() == null || b.getCreatedAt() == null) return 0;
+            return b.getCreatedAt().compareTo(a.getCreatedAt());
         });
     }
 
@@ -171,11 +292,11 @@ public class CasesController implements MainLayoutController.Refreshable {
                 CaseModel active = AppConfig.getInstance().getActiveCase();
                 if (active != null && masterData.contains(active)) {
                     casesTable.getSelectionModel().select(active);
+                    this.selectedCase = active;
                 } else {
                     casesTable.getSelectionModel().selectFirst();
+                    this.selectedCase = masterData.get(0);
                 }
-            } else {
-                showCaseDetails(null);
             }
         });
 
@@ -189,44 +310,113 @@ public class CasesController implements MainLayoutController.Refreshable {
         th.start();
     }
 
-    private void showCaseDetails(CaseModel cm) {
+    public void openCaseDetails(CaseModel cm) {
+        if (cm == null) return;
         this.selectedCase = cm;
-        if (cm == null) {
-            detailCaseNumber.setText("No Case Selected");
-            detailTitle.setText("Select a case from the table to view details");
-            detailDescription.setText("");
-            detailInvestigator.setText("N/A");
-            detailCreated.setText("N/A");
-            detailUpdated.setText("N/A");
-            detailBadges.getChildren().clear();
-            setActiveButton.setDisable(true);
-            editButton.setDisable(true);
-            deleteButton.setDisable(true);
-            return;
+        AppConfig.getInstance().setActiveCase(cm);
+
+        // Populate Case Details (Panel 4)
+        detailCaseHeaderTitle.setText(cm.getCaseNumber() + " - " + cm.getTitle());
+        detailCaseDescription.setText(cm.getDescription() != null && !cm.getDescription().isBlank()
+                ? cm.getDescription() : "Investigation case record.");
+
+        detailHeaderBadges.getChildren().clear();
+        if (UiUtils.isHistoricalCase(cm.getCaseNumber())) {
+            detailHeaderBadges.getChildren().add(UiUtils.createHistoricalBadge());
         }
-
-        detailCaseNumber.setText(cm.getCaseNumber());
-        detailTitle.setText(cm.getTitle());
-        detailDescription.setText(cm.getDescription() != null ? cm.getDescription() : "No case description provided.");
-        detailInvestigator.setText(cm.getLeadInvestigator() != null ? cm.getLeadInvestigator() : "Unassigned");
-        detailCreated.setText(DateTimeUtils.formatUtc(cm.getCreatedAt()));
-        detailUpdated.setText(DateTimeUtils.formatUtc(cm.getUpdatedAt()));
-
-        detailBadges.getChildren().setAll(
+        detailHeaderBadges.getChildren().addAll(
                 UiUtils.createStatusBadge(cm.getStatus()),
                 UiUtils.createPriorityBadge(cm.getPriority())
         );
 
-        setActiveButton.setDisable(false);
-        editButton.setDisable(false);
-        deleteButton.setDisable(false);
+        detailInvestigatorLabel.setText(cm.getLeadInvestigator() != null && !cm.getLeadInvestigator().isBlank()
+                ? cm.getLeadInvestigator() : "Unassigned");
+
+        detailTotalEvidence.setText(String.valueOf(cm.getEvidenceCount()));
+        detailTotalEvents.setText(String.valueOf(cm.getEventCount()));
+        detailTotalAnomalies.setText(String.valueOf(cm.getAnomalyCount()));
+
+        int progress = cm.getStatus() == CaseStatus.CLOSED ? 100 :
+                (cm.getAnomalyCount() > 0 ? 85 :
+                (cm.getEventCount() > 0 ? 60 :
+                (cm.getEvidenceCount() > 0 ? 35 : 15)));
+        detailProgressPercent.setText(progress + "%");
+        detailProgressBar.setProgress(progress / 100.0);
+
+        detailPriorityText.setText(cm.getPriority().getDisplayName());
+        detailPriorityText.setStyle("-fx-font-weight: bold; -fx-text-fill: " + (cm.getPriority() == CasePriority.HIGH || cm.getPriority() == CasePriority.CRITICAL ? "#DC2626;" : "#D97706;"));
+
+        detailStatusText.setText(cm.getStatus().getDisplayName());
+        detailStatusText.setStyle("-fx-font-weight: bold; -fx-text-fill: " + (cm.getStatus() == CaseStatus.CLOSED ? "#059669;" : "#D97706;"));
+
+        detailUpdatedText.setText(cm.getUpdatedAt() != null ? DateTimeUtils.getRelativeTime(cm.getUpdatedAt()) : "Recently");
+
+        // Banner thumbnail
+        detailThumbnailContainer.getChildren().setAll(
+                UiUtils.createCaseThumbnailView(cm.getCaseNumber(), cm.getTitle(), 120, 80, 8)
+        );
+
+        // Switch view
+        tableViewContainer.setVisible(false);
+        tableViewContainer.setManaged(false);
+        caseDetailsContainer.setVisible(true);
+        caseDetailsContainer.setManaged(true);
+    }
+
+    @FXML
+    private void onCloseDetails() {
+        caseDetailsContainer.setVisible(false);
+        caseDetailsContainer.setManaged(false);
+        tableViewContainer.setVisible(true);
+        tableViewContainer.setManaged(true);
+    }
+
+    // Sub-navigation action tabs
+    @FXML
+    private void onJumpToEvidence() {
+        if (selectedCase != null) AppConfig.getInstance().setActiveCase(selectedCase);
+        if (MainLayoutController.getInstance() != null) {
+            MainLayoutController.getInstance().navigateToScreen("Evidence");
+        }
+    }
+
+    @FXML
+    private void onJumpToTimeline() {
+        if (selectedCase != null) AppConfig.getInstance().setActiveCase(selectedCase);
+        if (MainLayoutController.getInstance() != null) {
+            MainLayoutController.getInstance().navigateToScreen("Timeline");
+        }
+    }
+
+    @FXML
+    private void onJumpToGraph() {
+        if (selectedCase != null) AppConfig.getInstance().setActiveCase(selectedCase);
+        if (MainLayoutController.getInstance() != null) {
+            MainLayoutController.getInstance().navigateToScreen("RelationshipGraph");
+        }
+    }
+
+    @FXML
+    private void onJumpToAnomalies() {
+        if (selectedCase != null) AppConfig.getInstance().setActiveCase(selectedCase);
+        if (MainLayoutController.getInstance() != null) {
+            MainLayoutController.getInstance().navigateToScreen("Anomalies");
+        }
+    }
+
+    @FXML
+    private void onJumpToSummary() {
+        if (selectedCase != null) AppConfig.getInstance().setActiveCase(selectedCase);
+        if (MainLayoutController.getInstance() != null) {
+            MainLayoutController.getInstance().navigateToScreen("AiSummary");
+        }
     }
 
     @FXML
     private void onSetActiveCase() {
         if (selectedCase != null) {
             AppConfig.getInstance().setActiveCase(selectedCase);
-            UiUtils.showInfo("Active Case Updated", "Case " + selectedCase.getCaseNumber() + " is now the active workstation focus.");
+            UiUtils.showInfo("Active Focus Case Set", "Case " + selectedCase.getCaseNumber() + " is now selected across all analysis modules.");
         }
     }
 
@@ -234,48 +424,63 @@ public class CasesController implements MainLayoutController.Refreshable {
     private void onNewCase() {
         Dialog<CaseModel> dialog = new Dialog<>();
         dialog.setTitle("Create New Investigation Case");
-        dialog.setHeaderText("Create Case Record (POST /api/cases)");
+        dialog.setHeaderText("Register Investigation Case Record");
 
         DialogPane pane = dialog.getDialogPane();
         pane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        pane.setStyle("-fx-background-color: #0F172A; -fx-text-fill: #F8FAFC;");
+        pane.setStyle("-fx-background-color: #FFFFFF; -fx-text-fill: #0F172A; -fx-border-color: #CBD5E1;");
 
         GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(12);
+        grid.setHgap(12);
+        grid.setVgap(14);
         grid.setPadding(new Insets(20));
 
-        TextField titleField = new TextField();
-        titleField.setPromptText("e.g. Unauthorized Cloud Egress");
+        String generatedCaseNum = "CASE-" + (System.currentTimeMillis() % 1000000);
+        TextField caseNumField = new TextField(generatedCaseNum);
+        caseNumField.setPromptText("e.g. CASE-2026-001");
+
+        TextField titleField = new TextField("Investigation " + generatedCaseNum);
+        titleField.setPromptText("e.g. Corporate Securities Incident");
 
         TextArea descArea = new TextArea();
-        descArea.setPromptText("Case scope and initial incident description...");
+        descArea.setPromptText("Case scope and investigative context...");
         descArea.setPrefRowCount(3);
 
         ComboBox<CasePriority> priorityBox = new ComboBox<>(FXCollections.observableArrayList(CasePriority.values()));
         priorityBox.setValue(CasePriority.HIGH);
 
-        TextField investigatorField = new TextField();
-        investigatorField.setPromptText("Special Agent / Analyst name");
+        String activeUser = com.investigation.service.SessionService.getInstance().getCurrentSession() != null
+                ? com.investigation.service.SessionService.getInstance().getCurrentSession().getUsername() : "Investigator";
+        TextField investigatorField = new TextField(activeUser);
+        investigatorField.setPromptText("Lead Investigator");
 
-        grid.add(new Label("Case Title:"), 0, 0);
-        grid.add(titleField, 1, 0);
-        grid.add(new Label("Priority:"), 0, 1);
-        grid.add(priorityBox, 1, 1);
-        grid.add(new Label("Investigator:"), 0, 2);
-        grid.add(investigatorField, 1, 2);
-        grid.add(new Label("Description:"), 0, 3);
-        grid.add(descArea, 1, 3);
+        grid.add(new Label("Case Number: *"), 0, 0);
+        grid.add(caseNumField, 1, 0);
+        grid.add(new Label("Case Title: *"), 0, 1);
+        grid.add(titleField, 1, 1);
+        grid.add(new Label("Priority:"), 0, 2);
+        grid.add(priorityBox, 1, 2);
+        grid.add(new Label("Lead Investigator:"), 0, 3);
+        grid.add(investigatorField, 1, 3);
+        grid.add(new Label("Description:"), 0, 4);
+        grid.add(descArea, 1, 4);
 
         pane.setContent(grid);
 
         dialog.setResultConverter(btn -> {
             if (btn == ButtonType.OK) {
                 CaseModel cm = new CaseModel();
-                cm.setTitle(titleField.getText());
-                cm.setDescription(descArea.getText());
-                cm.setPriority(priorityBox.getValue());
-                cm.setLeadInvestigator(investigatorField.getText());
+                String num = caseNumField.getText();
+                if (num == null || num.isBlank()) num = generatedCaseNum;
+                String title = titleField.getText();
+                if (title == null || title.isBlank()) title = "Investigation " + num.trim();
+
+                cm.setCaseNumber(num.trim());
+                cm.setTitle(title.trim());
+                cm.setDescription(descArea.getText() != null ? descArea.getText().trim() : "");
+                cm.setPriority(priorityBox.getValue() != null ? priorityBox.getValue() : CasePriority.HIGH);
+                cm.setLeadInvestigator(investigatorField.getText() != null && !investigatorField.getText().isBlank()
+                        ? investigatorField.getText().trim() : "Unassigned");
                 cm.setStatus(CaseStatus.OPEN);
                 return cm;
             }
@@ -305,15 +510,15 @@ public class CasesController implements MainLayoutController.Refreshable {
 
         Dialog<CaseModel> dialog = new Dialog<>();
         dialog.setTitle("Edit Case Details");
-        dialog.setHeaderText("Update Case " + selectedCase.getCaseNumber() + " (PUT /api/cases/{id})");
+        dialog.setHeaderText("Update Case Record: " + selectedCase.getCaseNumber());
 
         DialogPane pane = dialog.getDialogPane();
         pane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        pane.setStyle("-fx-background-color: #0F172A; -fx-text-fill: #F8FAFC;");
+        pane.setStyle("-fx-background-color: #FFFFFF; -fx-text-fill: #0F172A; -fx-border-color: #CBD5E1;");
 
         GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(12);
+        grid.setHgap(12);
+        grid.setVgap(14);
         grid.setPadding(new Insets(20));
 
         TextField titleField = new TextField(selectedCase.getTitle());
@@ -363,6 +568,7 @@ public class CasesController implements MainLayoutController.Refreshable {
             };
             task.setOnSucceeded(e -> {
                 refreshData();
+                openCaseDetails(updated);
                 UiUtils.showInfo("Case Updated", "Case " + updated.getCaseNumber() + " successfully updated.");
             });
             task.setOnFailed(e -> UiUtils.showError("Failed to Update Case", task.getException().getMessage()));
@@ -378,7 +584,7 @@ public class CasesController implements MainLayoutController.Refreshable {
                 "Confirm Case Deletion",
                 "Delete " + selectedCase.getCaseNumber() + "?",
                 "Are you sure you want to permanently delete case '" + selectedCase.getTitle() + "'?\n" +
-                        "This will call DELETE /api/cases/" + selectedCase.getId() + " on the backend."
+                        "This operation will remove associated evidence records from PostgreSQL."
         );
 
         if (!confirm) return;
@@ -396,6 +602,7 @@ public class CasesController implements MainLayoutController.Refreshable {
                 if (selectedCase.equals(AppConfig.getInstance().getActiveCase())) {
                     AppConfig.getInstance().setActiveCase(null);
                 }
+                onCloseDetails();
                 refreshData();
             } else {
                 UiUtils.showError("Deletion Failed", "Backend rejected case deletion.");

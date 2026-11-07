@@ -62,7 +62,8 @@ public class RestEvidenceService implements EvidenceService {
                 dto.getSource() != null ? dto.getSource() : "Uploaded Evidence",
                 dto.getHashSha256(),
                 dto.getEventCount() != null ? dto.getEventCount() : 0,
-                dto.getDescription()
+                dto.getDescription(),
+                dto.getUploadedBy()
         );
     }
 }

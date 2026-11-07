@@ -217,7 +217,7 @@ public class GraphController implements MainLayoutController.Refreshable {
             keyLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-min-width: 90px;");
 
             Label valLabel = new Label(String.valueOf(entry.getValue()));
-            valLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #F8FAFC; -fx-font-weight: bold;");
+            valLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #0F172A; -fx-font-weight: bold;");
             valLabel.setWrapText(true);
 
             row.getChildren().addAll(keyLabel, valLabel);
@@ -231,13 +231,13 @@ public class GraphController implements MainLayoutController.Refreshable {
 
             HBox item = new HBox(6);
             item.setAlignment(Pos.CENTER_LEFT);
-            item.setStyle("-fx-background-color: #090E1A; -fx-padding: 6px 8px; -fx-background-radius: 4px; -fx-cursor: hand;");
+            item.setStyle("-fx-background-color: #F8FAFC; -fx-padding: 6px 10px; -fx-background-radius: 6px; -fx-border-color: #E2E8F0; -fx-border-radius: 6px; -fx-cursor: hand;");
 
             Label relBadge = new Label(edge.getLabel());
-            relBadge.setStyle("-fx-font-size: 9px; -fx-font-weight: bold; -fx-text-fill: #38BDF8; -fx-background-color: rgba(56, 189, 248, 0.12); -fx-padding: 2px 4px; -fx-background-radius: 3px;");
+            relBadge.setStyle("-fx-font-size: 9px; -fx-font-weight: bold; -fx-text-fill: #2563EB; -fx-background-color: #EFF6FF; -fx-padding: 2px 6px; -fx-background-radius: 3px;");
 
             Label neighborLabel = new Label(neighbor.getLabel());
-            neighborLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #F8FAFC;");
+            neighborLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: 600; -fx-text-fill: #0F172A;");
 
             item.getChildren().addAll(relBadge, neighborLabel);
 

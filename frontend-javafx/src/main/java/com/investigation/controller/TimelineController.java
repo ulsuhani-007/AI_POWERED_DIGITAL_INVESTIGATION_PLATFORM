@@ -3,6 +3,7 @@ package com.investigation.controller;
 import com.investigation.config.AppConfig;
 import com.investigation.model.CaseModel;
 import com.investigation.model.EventModel;
+import com.investigation.model.enums.Severity;
 import com.investigation.service.EventService;
 import com.investigation.service.ServiceFactory;
 import com.investigation.util.DateTimeUtils;
@@ -18,17 +19,22 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Controller for Chronological Forensic Timeline matching the reference design:
+ * - Clean vertical timeline with timestamps, event types, IP addresses, and severity badges
+ * - Instant filtering by search query and category
+ * - Detail panel for selected event
+ */
 public class TimelineController implements MainLayoutController.Refreshable {
 
     @FXML private Label activeCaseHeaderLabel;
     @FXML private TextField searchField;
     @FXML private ComboBox<String> eventTypeComboBox;
-    @FXML private ToggleButton sortOrderToggle; // Newest / Oldest
+    @FXML private ToggleButton sortOrderToggle;
     @FXML private Label eventCountLabel;
 
     @FXML private ListView<EventModel> eventsListView;
@@ -43,7 +49,6 @@ public class TimelineController implements MainLayoutController.Refreshable {
     @FXML private Label detailSuccess;
     @FXML private Label detailBytes;
     @FXML private Label detailEvidenceId;
-    @FXML private Label detailEventId;
     @FXML private TextArea detailDescriptionArea;
 
     @FXML private StackPane overlayPane;
@@ -88,7 +93,7 @@ public class TimelineController implements MainLayoutController.Refreshable {
 
         if (sortOrderToggle != null) {
             sortOrderToggle.selectedProperty().addListener((obs, oldVal, newVal) -> {
-                sortOrderToggle.setText(newVal ? "⏱️ Newest First" : "⏱️ Oldest First");
+                sortOrderToggle.setText(newVal ? "⏱ Newest First" : "⏱ Oldest First");
                 sortedEvents.setComparator((e1, e2) -> {
                     int cmp = e1.getTimestamp().compareTo(e2.getTimestamp());
                     return newVal ? -cmp : cmp;
@@ -112,14 +117,17 @@ public class TimelineController implements MainLayoutController.Refreshable {
                     (evt.getEventType() != null && evt.getEventType().toLowerCase().contains(query)) ||
                     (evt.getUser() != null && evt.getUser().toLowerCase().contains(query)) ||
                     (evt.getIpAddress() != null && evt.getIpAddress().toLowerCase().contains(query)) ||
-                    (evt.getDevice() != null && evt.getDevice().toLowerCase().contains(query)) ||
-                    (evt.getId() != null && evt.getId().toLowerCase().contains(query));
+                    (evt.getDevice() != null && evt.getDevice().toLowerCase().contains(query));
         });
 
         eventCountLabel.setText("Showing " + filteredEvents.size() + " of " + masterEvents.size() + " events");
     }
 
     private void setupListView() {
+        Label placeholder = new Label("No timeline events available for this case.\nUpload supported evidence to extract chronological telemetry.");
+        placeholder.setStyle("-fx-text-fill: #64748B; -fx-font-size: 13px; -fx-alignment: center; -fx-text-alignment: center;");
+        eventsListView.setPlaceholder(placeholder);
+
         eventsListView.setItems(sortedEvents);
         eventsListView.setCellFactory(lv -> new ListCell<>() {
             @Override
@@ -128,9 +136,11 @@ public class TimelineController implements MainLayoutController.Refreshable {
                 if (empty || item == null) {
                     setGraphic(null);
                     setText(null);
+                    setStyle("-fx-background-color: transparent;");
                 } else {
                     setGraphic(createEventCard(item));
                     setText(null);
+                    setStyle("-fx-background-color: transparent; -fx-padding: 3px 0;");
                 }
             }
         });
@@ -140,63 +150,83 @@ public class TimelineController implements MainLayoutController.Refreshable {
         });
     }
 
-    private VBox createEventCard(EventModel evt) {
-        VBox card = new VBox(4);
-        card.getStyleClass().add("timeline-card");
+    private HBox createEventCard(EventModel evt) {
+        HBox row = new HBox(12);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setStyle("-fx-background-color: #FFFFFF; -fx-padding: 10px 14px; -fx-background-radius: 8px; -fx-border-color: #E2E8F0; -fx-border-radius: 8px; -fx-cursor: hand;");
 
-        // Top line: Time + Event Type Badge + ID
-        HBox top = new HBox(8);
-        top.setAlignment(Pos.CENTER_LEFT);
+        // Hover effect
+        row.setOnMouseEntered(e -> row.setStyle("-fx-background-color: #F8FAFC; -fx-padding: 10px 14px; -fx-background-radius: 8px; -fx-border-color: #CBD5E1; -fx-border-radius: 8px; -fx-cursor: hand;"));
+        row.setOnMouseExited(e -> row.setStyle("-fx-background-color: #FFFFFF; -fx-padding: 10px 14px; -fx-background-radius: 8px; -fx-border-color: #E2E8F0; -fx-border-radius: 8px; -fx-cursor: hand;"));
 
-        Label timeLabel = new Label(DateTimeUtils.formatUtc(evt.getTimestamp()));
-        timeLabel.getStyleClass().add("timeline-time");
+        // Left circular timeline node dot
+        StackPane nodeDot = new StackPane();
+        nodeDot.setStyle("-fx-background-color: #2563EB; -fx-background-radius: 50%; -fx-min-width: 10px; -fx-min-height: 10px; -fx-max-width: 10px; -fx-max-height: 10px;");
 
-        Label typeBadge = new Label(evt.getEventType() != null ? evt.getEventType() : "EVENT");
-        typeBadge.setStyle("-fx-background-color: rgba(56, 189, 248, 0.15); -fx-text-fill: #38BDF8; -fx-padding: 2px 6px; -fx-background-radius: 4px; -fx-font-size: 10px; -fx-font-weight: bold;");
+        // Time label (e.g. 12:46:32)
+        String timeStr = DateTimeUtils.formatTimeOnly(evt.getTimestamp());
+        Label timeLabel = new Label(timeStr != null ? timeStr : "12:00:00");
+        timeLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: 800; -fx-text-fill: #0F172A; -fx-min-width: 75px;");
+
+        // Separator vertical bar
+        Separator sep = new Separator();
+        sep.setOrientation(javafx.geometry.Orientation.VERTICAL);
+        sep.setPrefHeight(20);
+
+        // Action title: e.g. "Suspicious Login | 192.168.1.10" or "File Access | flight.png"
+        String actionType = evt.getEventType() != null ? evt.getEventType().replace("_", " ") : "Event";
+        String target = evt.getIpAddress() != null ? evt.getIpAddress() :
+                (evt.getFileName() != null ? evt.getFileName() : (evt.getUser() != null ? evt.getUser() : "System"));
+        Label actionLabel = new Label(actionType + "  |  " + target);
+        actionLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: 700; -fx-text-fill: #0F172A;");
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Label idLabel = new Label("ID: " + evt.getId());
-        idLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #475569; -fx-font-family: monospace;");
+        // Severity badge
+        Severity severity = determineSeverity(evt);
+        Label sevBadge = UiUtils.createSeverityBadge(severity);
 
-        top.getChildren().addAll(typeBadge, timeLabel, spacer, idLabel);
+        row.getChildren().addAll(nodeDot, timeLabel, sep, actionLabel, spacer, sevBadge);
+        return row;
+    }
 
-        // Description
-        Label descLabel = new Label(evt.getDescription() != null ? evt.getDescription() : "No event description.");
-        descLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #F8FAFC; -fx-font-weight: 500;");
-        descLabel.setWrapText(true);
+    private Severity determineSeverity(EventModel evt) {
+        String desc = evt.getDescription() != null ? evt.getDescription().toLowerCase() : "";
+        String type = evt.getEventType() != null ? evt.getEventType().toUpperCase() : "";
 
-        // Metadata Pills (User, Device, IP, Bytes)
-        HBox pills = new HBox(12);
-        pills.setAlignment(Pos.CENTER_LEFT);
-
-        if (evt.getUser() != null && !evt.getUser().isBlank()) {
-            Label u = new Label("👤 " + evt.getUser());
-            u.setStyle("-fx-font-size: 10px; -fx-text-fill: #00F0FF;");
-            pills.getChildren().add(u);
+        if (desc.contains("breach") || desc.contains("ransom") || desc.contains("unauthorized") || desc.contains("pressure spike") || desc.contains("abduction")) {
+            return Severity.HIGH;
+        } else if (desc.contains("suspicious") || desc.contains("clearing") || desc.contains("off-hours") || type.contains("LOGIN")) {
+            return Severity.MEDIUM;
+        } else {
+            return Severity.LOW;
         }
-        if (evt.getDevice() != null && !evt.getDevice().isBlank()) {
-            Label d = new Label("💻 " + evt.getDevice());
-            d.setStyle("-fx-font-size: 10px; -fx-text-fill: #A855F7;");
-            pills.getChildren().add(d);
-        }
-        if (evt.getIpAddress() != null && !evt.getIpAddress().isBlank()) {
-            Label ip = new Label("🌐 " + evt.getIpAddress());
-            ip.setStyle("-fx-font-size: 10px; -fx-text-fill: #F59E0B;");
-            pills.getChildren().add(ip);
-        }
-        if (evt.getBytesTransferred() != null && evt.getBytesTransferred() > 0) {
-            String bytesText = evt.getBytesTransferred() > 1024 * 1024
-                    ? String.format("%.2f MB", evt.getBytesTransferred() / (1024.0 * 1024.0))
-                    : evt.getBytesTransferred() + " B";
-            Label b = new Label("📊 " + bytesText);
-            b.setStyle("-fx-font-size: 10px; -fx-text-fill: #10B981;");
-            pills.getChildren().add(b);
+    }
+
+    private void showEventDetails(EventModel evt) {
+        if (evt == null) {
+            detailEventType.setText("EVENT");
+            detailTimestamp.setText("--");
+            detailUser.setText("--");
+            detailDevice.setText("--");
+            detailIp.setText("--");
+            detailSuccess.setText("--");
+            detailBytes.setText("--");
+            detailEvidenceId.setText("--");
+            detailDescriptionArea.setText("Select an event from the timeline feed to inspect normalized telemetry.");
+            return;
         }
 
-        card.getChildren().addAll(top, descLabel, pills);
-        return card;
+        detailEventType.setText(evt.getEventType() != null ? evt.getEventType() : "EVENT");
+        detailTimestamp.setText(DateTimeUtils.formatUtc(evt.getTimestamp()));
+        detailUser.setText(evt.getUser() != null ? evt.getUser() : "System / Automated");
+        detailDevice.setText(evt.getDevice() != null ? evt.getDevice() : "Local Device");
+        detailIp.setText(evt.getIpAddress() != null ? evt.getIpAddress() : "127.0.0.1");
+        detailSuccess.setText(evt.getSuccess() != null && evt.getSuccess() ? "SUCCESS (200 OK)" : "FLAGGED / WARN");
+        detailBytes.setText(evt.getBytesTransferred() != null ? evt.getBytesTransferred() + " bytes transferred" : "N/A");
+        detailEvidenceId.setText(evt.getEvidenceId() != null ? "Ref: " + evt.getEvidenceId() : "Manual Ingest");
+        detailDescriptionArea.setText(evt.getDescription() != null ? evt.getDescription() : "No detailed description.");
     }
 
     @FXML
@@ -204,32 +234,20 @@ public class TimelineController implements MainLayoutController.Refreshable {
     public void refreshData() {
         CaseModel activeCase = AppConfig.getInstance().getActiveCase();
         if (activeCase == null) {
-            try {
-                List<CaseModel> allCases = ServiceFactory.getInstance().getCaseService().getAllCases();
-                if (!allCases.isEmpty()) {
-                    activeCase = allCases.get(0);
-                    AppConfig.getInstance().setActiveCase(activeCase);
-                }
-            } catch (Exception ignored) {}
-        }
-
-        if (activeCase == null) {
-            activeCaseHeaderLabel.setText("NO ACTIVE CASE SELECTED");
+            activeCaseHeaderLabel.setText("[No Case Selected]");
             masterEvents.clear();
             showEventDetails(null);
             return;
         }
 
-        final CaseModel currentCase = activeCase;
-        activeCaseHeaderLabel.setText("CHRONOLOGICAL TIMELINE FOR " + currentCase.getCaseNumber() + " : " + currentCase.getTitle());
-
-        showLoading("Extracting normalized event stream (GET /api/cases/" + currentCase.getId() + "/events)...");
+        activeCaseHeaderLabel.setText("[" + activeCase.getCaseNumber() + " - " + activeCase.getTitle() + "]");
+        showLoading("Loading chronological events for " + activeCase.getCaseNumber() + "...");
 
         Task<List<EventModel>> task = new Task<>() {
             @Override
             protected List<EventModel> call() throws Exception {
                 EventService service = ServiceFactory.getInstance().getEventService();
-                return service.getEventsByCase(currentCase.getId());
+                return service.getEventsByCase(activeCase.getId());
             }
         };
 
@@ -238,29 +256,26 @@ public class TimelineController implements MainLayoutController.Refreshable {
             List<EventModel> list = task.getValue();
             masterEvents.setAll(list);
 
-            // Populate event type filter combo
+            // Populate event types in combo box
             Set<String> types = new HashSet<>();
             types.add("ALL");
-            for (EventModel ev : list) {
-                if (ev.getEventType() != null && !ev.getEventType().isBlank()) {
-                    types.add(ev.getEventType());
-                }
+            for (EventModel evt : list) {
+                if (evt.getEventType() != null) types.add(evt.getEventType());
             }
             eventTypeComboBox.getItems().setAll(types);
             eventTypeComboBox.setValue("ALL");
 
-            eventCountLabel.setText("Showing " + list.size() + " of " + list.size() + " events");
-
-            if (!list.isEmpty()) {
+            if (!masterEvents.isEmpty()) {
                 eventsListView.getSelectionModel().selectFirst();
             } else {
                 showEventDetails(null);
             }
+            eventCountLabel.setText("Showing " + masterEvents.size() + " events");
         });
 
         task.setOnFailed(e -> {
             hideLoading();
-            UiUtils.showError("Failed to Fetch Events", task.getException() != null ? task.getException().getMessage() : "Unknown error");
+            UiUtils.showError("Failed to Fetch Timeline", task.getException() != null ? task.getException().getMessage() : "Unknown error");
         });
 
         Thread th = new Thread(task);
@@ -268,30 +283,10 @@ public class TimelineController implements MainLayoutController.Refreshable {
         th.start();
     }
 
-    private void showEventDetails(EventModel evt) {
-        if (evt == null) {
-            detailEventType.setText("No Event Selected");
-            detailTimestamp.setText("N/A");
-            detailUser.setText("N/A");
-            detailDevice.setText("N/A");
-            detailIp.setText("N/A");
-            detailSuccess.setText("N/A");
-            detailBytes.setText("N/A");
-            detailEvidenceId.setText("N/A");
-            detailEventId.setText("N/A");
-            detailDescriptionArea.setText("Select an event from the timeline to view normalized parameters.");
-            return;
+    @FXML
+    private void onJumpToGraph() {
+        if (MainLayoutController.getInstance() != null) {
+            MainLayoutController.getInstance().navigateToScreen("RelationshipGraph");
         }
-
-        detailEventType.setText(evt.getEventType() != null ? evt.getEventType() : "EVENT");
-        detailTimestamp.setText(DateTimeUtils.formatUtc(evt.getTimestamp()));
-        detailUser.setText(evt.getUser() != null ? evt.getUser() : "None / Anonymous");
-        detailDevice.setText(evt.getDevice() != null ? evt.getDevice() : "Unspecified");
-        detailIp.setText(evt.getIpAddress() != null ? evt.getIpAddress() : "Local Loopback / N/A");
-        detailSuccess.setText(evt.getSuccess() != null ? (evt.getSuccess() ? "SUCCESS" : "FAILURE") : "N/A");
-        detailBytes.setText(evt.getBytesTransferred() != null ? evt.getBytesTransferred() + " bytes" : "0 bytes");
-        detailEvidenceId.setText(evt.getEvidenceId() != null ? evt.getEvidenceId() : "N/A");
-        detailEventId.setText(evt.getId() != null ? evt.getId() : "N/A");
-        detailDescriptionArea.setText(evt.getDescription() != null ? evt.getDescription() : "");
     }
 }

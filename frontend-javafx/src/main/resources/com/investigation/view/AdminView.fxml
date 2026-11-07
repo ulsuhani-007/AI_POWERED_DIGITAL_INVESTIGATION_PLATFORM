@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane fx:id="overlayPane" stylesheets="@../css/theme.css"
+           xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.investigation.controller.AdminController"
+           style="-fx-background-color: #F1F5F9;">
+
+    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F1F5F9;">
+        <VBox spacing="18.0" style="-fx-padding: 24px;">
+
+            <!-- Header -->
+            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                <HBox alignment="CENTER_LEFT" spacing="8.0">
+                    <Label text="⚙" style="-fx-font-size: 20px; -fx-text-fill: #0F172A;"/>
+                    <Label text="Administration" style="-fx-font-size: 20px; -fx-font-weight: 800; -fx-text-fill: #0F172A;"/>
+                </HBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="+ Add User" onAction="#onNewUser" styleClass="btn-primary"
+                        style="-fx-font-size: 13px; -fx-padding: 8px 16px;"/>
+                <Button text="🔄" onAction="#refreshData" styleClass="btn-secondary"/>
+            </HBox>
+
+            <!-- 6 Administration Module Cards (Matches Reference Image Panel 11) -->
+            <GridPane hgap="16.0" vgap="16.0">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="50.0"/>
+                    <ColumnConstraints percentWidth="50.0"/>
+                </columnConstraints>
+
+                <!-- Card 1: Users -->
+                <HBox fx:id="cardUsers" GridPane.rowIndex="0" GridPane.columnIndex="0" alignment="CENTER_LEFT" spacing="14.0"
+                      styleClass="white-card" style="-fx-cursor: hand;" onMouseClicked="#onCardUsers">
+                    <StackPane style="-fx-background-color: #EFF6FF; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px;">
+                        <Label text="👥" style="-fx-font-size: 18px; -fx-text-fill: #2563EB;"/>
+                    </StackPane>
+                    <VBox spacing="2.0">
+                        <Label text="Users" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                        <Label text="Manage users and roles" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Card 2: Data Management -->
+                <HBox fx:id="cardData" GridPane.rowIndex="0" GridPane.columnIndex="1" alignment="CENTER_LEFT" spacing="14.0"
+                      styleClass="white-card" style="-fx-cursor: hand;" onMouseClicked="#onCardData">
+                    <StackPane style="-fx-background-color: #F0FDF4; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px;">
+                        <Label text="🗄" style="-fx-font-size: 18px; -fx-text-fill: #16A34A;"/>
+                    </StackPane>
+                    <VBox spacing="2.0">
+                        <Label text="Data Management" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                        <Label text="Backup &amp; Restore" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Card 3: System Settings -->
+                <HBox fx:id="cardSettings" GridPane.rowIndex="1" GridPane.columnIndex="0" alignment="CENTER_LEFT" spacing="14.0"
+                      styleClass="white-card" style="-fx-cursor: hand;" onMouseClicked="#onCardSettings">
+                    <StackPane style="-fx-background-color: #F5F3FF; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px;">
+                        <Label text="⚙" style="-fx-font-size: 18px; -fx-text-fill: #7C3AED;"/>
+                    </StackPane>
+                    <VBox spacing="2.0">
+                        <Label text="System Settings" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                        <Label text="Configure application" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Card 4: Case Templates -->
+                <HBox fx:id="cardTemplates" GridPane.rowIndex="1" GridPane.columnIndex="1" alignment="CENTER_LEFT" spacing="14.0"
+                      styleClass="white-card" style="-fx-cursor: hand;" onMouseClicked="#onCardTemplates">
+                    <StackPane style="-fx-background-color: #FFF7ED; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px;">
+                        <Label text="📑" style="-fx-font-size: 18px; -fx-text-fill: #EA580C;"/>
+                    </StackPane>
+                    <VBox spacing="2.0">
+                        <Label text="Case Templates" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                        <Label text="Manage templates" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Card 5: Audit Logs -->
+                <HBox fx:id="cardLogs" GridPane.rowIndex="2" GridPane.columnIndex="0" alignment="CENTER_LEFT" spacing="14.0"
+                      styleClass="white-card" style="-fx-cursor: hand;" onMouseClicked="#onCardLogs">
+                    <StackPane style="-fx-background-color: #F8FAFC; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px; -fx-border-color: #E2E8F0; -fx-border-radius: 8px;">
+                        <Label text="📜" style="-fx-font-size: 18px; -fx-text-fill: #475569;"/>
+                    </StackPane>
+                    <VBox spacing="2.0">
+                        <Label text="Audit Logs" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                        <Label text="View system logs" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Card 6: Security -->
+                <HBox fx:id="cardSecurity" GridPane.rowIndex="2" GridPane.columnIndex="1" alignment="CENTER_LEFT" spacing="14.0"
+                      styleClass="white-card" style="-fx-cursor: hand;" onMouseClicked="#onCardSecurity">
+                    <StackPane style="-fx-background-color: #FEF2F2; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px;">
+                        <Label text="🔒" style="-fx-font-size: 18px; -fx-text-fill: #DC2626;"/>
+                    </StackPane>
+                    <VBox spacing="2.0">
+                        <Label text="Security" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                        <Label text="Configure security" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
+                    </VBox>
+                </HBox>
+            </GridPane>
+
+            <!-- Search and Filter Bar for Users -->
+            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                <HBox alignment="CENTER_LEFT" spacing="6.0"
+                      style="-fx-background-color: #FFFFFF; -fx-border-color: #CBD5E1; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-padding: 2 10 2 10;"
+                      HBox.hgrow="ALWAYS">
+                    <Label text="🔍" style="-fx-text-fill: #94A3B8; -fx-font-size: 12px;"/>
+                    <TextField fx:id="searchField" promptText="Filter users by username or role..."
+                               style="-fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 6 0 6 0; -fx-font-size: 12px;"
+                               HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <ComboBox fx:id="roleFilterComboBox" prefWidth="140.0" promptText="Role Filter"/>
+            </HBox>
+
+            <!-- Main Split: User Table (Left) + Detail Panel (Right) -->
+            <SplitPane dividerPositions="0.68" prefHeight="320.0" style="-fx-background-color: transparent;">
+
+                <!-- Table Section -->
+                <VBox spacing="8.0" styleClass="white-card" style="-fx-padding: 0;">
+                    <TableView fx:id="usersTable" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="colUsername" text="USERNAME" prefWidth="180.0"/>
+                            <TableColumn fx:id="colRole" text="ROLE" prefWidth="130.0"/>
+                            <TableColumn fx:id="colStatus" text="STATUS" prefWidth="100.0"/>
+                            <TableColumn fx:id="colCreatedAt" text="REGISTERED AT" prefWidth="160.0"/>
+                            <TableColumn fx:id="colId" text="USER ID" prefWidth="200.0"/>
+                        </columns>
+                        <placeholder>
+                            <Label text="No authorized investigator accounts found."/>
+                        </placeholder>
+                    </TableView>
+                </VBox>
+
+                <!-- User Detail & Action Panel -->
+                <VBox fx:id="detailPanel" spacing="12.0" styleClass="white-card">
+                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+                        <Label fx:id="detailUsername" text="Select User" styleClass="section-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="detailRoleBadge" text="ROLE" styleClass="badge-info"/>
+                    </HBox>
+
+                    <Separator/>
+
+                    <GridPane vgap="8.0" hgap="10.0">
+                        <Label text="Account ID:" style="-fx-text-fill: #64748B; -fx-font-size: 11px;" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label fx:id="detailUserId" text="N/A" style="-fx-text-fill: #0F172A; -fx-font-size: 11px; -fx-font-family: monospace;" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                        <Label text="Security Role:" style="-fx-text-fill: #64748B; -fx-font-size: 11px;" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Label fx:id="detailRole" text="N/A" style="-fx-text-fill: #2563EB; -fx-font-weight: bold; -fx-font-size: 11px;" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                        <Label text="Account Status:" style="-fx-text-fill: #64748B; -fx-font-size: 11px;" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <Label fx:id="detailStatus" text="N/A" style="-fx-text-fill: #059669; -fx-font-size: 11px; -fx-font-weight: bold;" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                        <Label text="Registered:" style="-fx-text-fill: #64748B; -fx-font-size: 11px;" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                        <Label fx:id="detailCreatedAt" text="N/A" style="-fx-text-fill: #0F172A; -fx-font-size: 11px;" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                    </GridPane>
+
+                    <Region VBox.vgrow="ALWAYS"/>
+
+                    <HBox spacing="10.0" alignment="CENTER_RIGHT">
+                        <Button fx:id="btnDeleteUser" text="🗑️ Delete Account" onAction="#onDeleteUser" styleClass="btn-danger"/>
+                    </HBox>
+                </VBox>
+
+            </SplitPane>
+
+        </VBox>
+    </ScrollPane>
+
+</StackPane>

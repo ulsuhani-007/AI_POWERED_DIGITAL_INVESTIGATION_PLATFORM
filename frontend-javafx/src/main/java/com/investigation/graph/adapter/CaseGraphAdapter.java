@@ -26,12 +26,13 @@ public class CaseGraphAdapter {
         GraphData graph = new GraphData();
         if (caseModel == null) return graph;
 
-        // Cache for de-duplicating entity nodes (users, devices, IPs, locations)
+        // Cache for de-duplicating entity nodes (users, devices, IPs, files, URLs)
         Map<String, GraphNode> userNodes = new HashMap<>();
         Map<String, GraphNode> deviceNodes = new HashMap<>();
         Map<String, GraphNode> ipNodes = new HashMap<>();
+        Map<String, GraphNode> fileNodes = new HashMap<>();
+        Map<String, GraphNode> urlNodes = new HashMap<>();
         Map<String, GraphNode> evidenceNodes = new HashMap<>();
-        Map<String, GraphNode> locationNodes = new HashMap<>();
 
         // 1. Evidence Nodes
         if (evidenceList != null) {
@@ -146,10 +147,11 @@ public class CaseGraphAdapter {
                     }
                 }
 
-                // IP Address Entity Node
+                // IP Address Entity Node (Source IP)
+                GraphNode ipNode = null;
                 if (evt.getIpAddress() != null && !evt.getIpAddress().isBlank()) {
                     String ipKey = evt.getIpAddress();
-                    GraphNode ipNode = ipNodes.computeIfAbsent(ipKey, k -> {
+                    ipNode = ipNodes.computeIfAbsent(ipKey, k -> {
                         boolean isExternal = !ipKey.startsWith("192.168.") && !ipKey.startsWith("10.") && !ipKey.startsWith("127.");
                         GraphNode n = new GraphNode(
                                 "ip_" + ipKey.replace(".", "_"),
@@ -170,25 +172,129 @@ public class CaseGraphAdapter {
                             "COMMUNICATED_WITH"
                     ));
 
-                    // Add simulated geo location for external suspicious IPs
-                    if (ipKey.startsWith("198.51.")) {
-                        GraphNode locNode = locationNodes.computeIfAbsent("loc_tor", k -> {
-                            GraphNode l = new GraphNode("loc_tor", "Tor Exit Relay", NodeType.LOCATION, "Anonymized");
-                            l.addProperty("Country", "Netherlands (Simulated)");
-                            l.addProperty("Threat Level", "HIGH / Tor Node");
-                            graph.addNode(l);
-                            return l;
-                        });
-                        graph.addEdge(new GraphEdge("e_ip_loc_" + ipKey, ipNode, locNode, "GEO_RESOLVED"));
-                    } else if (ipKey.startsWith("203.0.113.")) {
-                        GraphNode locNode = locationNodes.computeIfAbsent("loc_bucharest", k -> {
-                            GraphNode l = new GraphNode("loc_bucharest", "Bucharest, RO", NodeType.LOCATION, "WAN Geolocation");
-                            l.addProperty("Country", "Romania");
-                            l.addProperty("Confidence", "85%");
-                            graph.addNode(l);
-                            return l;
-                        });
-                        graph.addEdge(new GraphEdge("e_ip_loc_" + ipKey, ipNode, locNode, "GEO_RESOLVED"));
+                    // USER -> IP
+                    if (evt.getUser() != null && !evt.getUser().isBlank()) {
+                        GraphNode uNode = userNodes.get(evt.getUser().toLowerCase());
+                        if (uNode != null) {
+                            graph.addEdge(new GraphEdge(
+                                    "e_uip_" + uNode.getId() + "_" + ipNode.getId(),
+                                    uNode,
+                                    ipNode,
+                                    "ORIGINATED_FROM"
+                            ));
+                        }
+                    }
+                }
+
+                // Destination IP Entity Node
+                if (evt.getDestinationIp() != null && !evt.getDestinationIp().isBlank()) {
+                    String destIpKey = evt.getDestinationIp();
+                    GraphNode destIpNode = ipNodes.computeIfAbsent(destIpKey, k -> {
+                        boolean isExternal = !destIpKey.startsWith("192.168.") && !destIpKey.startsWith("10.") && !destIpKey.startsWith("127.");
+                        GraphNode n = new GraphNode(
+                                "ip_" + destIpKey.replace(".", "_"),
+                                destIpKey,
+                                NodeType.IP_ADDRESS,
+                                isExternal ? "Destination WAN" : "Destination LAN"
+                        );
+                        n.addProperty("IP Address", destIpKey);
+                        n.addProperty("Type", "Destination IP");
+                        graph.addNode(n);
+                        return n;
+                    });
+
+                    // EVENT -> DESTINATION IP
+                    graph.addEdge(new GraphEdge(
+                            "e_destip_" + evt.getId(),
+                            eventNode,
+                            destIpNode,
+                            "TARGET_IP"
+                    ));
+
+                    // IP -> DESTINATION IP
+                    if (ipNode != null && !ipNode.equals(destIpNode)) {
+                        graph.addEdge(new GraphEdge(
+                                "e_iproute_" + ipNode.getId() + "_" + destIpNode.getId(),
+                                ipNode,
+                                destIpNode,
+                                "CONNECTED_TO"
+                        ));
+                    }
+                }
+
+                // Target File Entity Node
+                if (evt.getFileName() != null && !evt.getFileName().isBlank()) {
+                    String fileKey = evt.getFileName().toLowerCase();
+                    GraphNode fNode = fileNodes.computeIfAbsent(fileKey, k -> {
+                        GraphNode n = new GraphNode(
+                                "file_" + Math.abs(fileKey.hashCode()),
+                                evt.getFileName(),
+                                NodeType.FILE,
+                                "File Resource"
+                        );
+                        n.addProperty("File Name", evt.getFileName());
+                        n.addProperty("Entity Type", "Target File");
+                        graph.addNode(n);
+                        return n;
+                    });
+
+                    // EVENT -> FILE
+                    graph.addEdge(new GraphEdge(
+                            "e_file_" + evt.getId(),
+                            eventNode,
+                            fNode,
+                            "TARGET_FILE"
+                    ));
+
+                    // USER -> FILE
+                    if (evt.getUser() != null && !evt.getUser().isBlank()) {
+                        GraphNode uNode = userNodes.get(evt.getUser().toLowerCase());
+                        if (uNode != null) {
+                            graph.addEdge(new GraphEdge(
+                                    "e_ufile_" + uNode.getId() + "_" + fNode.getId(),
+                                    uNode,
+                                    fNode,
+                                    "ACCESSED_FILE"
+                            ));
+                        }
+                    }
+                }
+
+                // URL Resource Entity Node
+                if (evt.getUrl() != null && !evt.getUrl().isBlank()) {
+                    String urlKey = evt.getUrl().toLowerCase();
+                    GraphNode urlNode = urlNodes.computeIfAbsent(urlKey, k -> {
+                        GraphNode n = new GraphNode(
+                                "url_" + Math.abs(urlKey.hashCode()),
+                                evt.getUrl(),
+                                NodeType.URL,
+                                "Web Endpoint"
+                        );
+                        n.addProperty("URL", evt.getUrl());
+                        n.addProperty("Entity Type", "Requested URL");
+                        graph.addNode(n);
+                        return n;
+                    });
+
+                    // EVENT -> URL
+                    graph.addEdge(new GraphEdge(
+                            "e_url_" + evt.getId(),
+                            eventNode,
+                            urlNode,
+                            "REQUESTED_URL"
+                    ));
+
+                    // USER -> URL
+                    if (evt.getUser() != null && !evt.getUser().isBlank()) {
+                        GraphNode uNode = userNodes.get(evt.getUser().toLowerCase());
+                        if (uNode != null) {
+                            graph.addEdge(new GraphEdge(
+                                    "e_uurl_" + uNode.getId() + "_" + urlNode.getId(),
+                                    uNode,
+                                    urlNode,
+                                    "VISITED_URL"
+                            ));
+                        }
                     }
                 }
             }

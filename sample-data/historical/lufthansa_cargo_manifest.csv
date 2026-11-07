@@ -1,0 +1,5 @@
+timestamp,user,fileName,action,device
+1978-12-10T14:30:00,Louis Werner,manifest_lh493_valuable_cargo.dat,MANIFEST_LOOKUP,TERMINAL-JFK-CARGO-01
+1978-12-11T03:25:00,John Murray,high_security_vault_inner_door.dat,VAULT_DOOR_UNLOCK,TERMINAL-JFK-VAULT-01
+1978-12-13T10:00:00,FBI Forensic Team,canarsie_getaway_van_fingerprint_log.dat,VEHICLE_PROCESSING,FBI-FIELD-TERMINAL-01
+

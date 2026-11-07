@@ -3,6 +3,8 @@ package com.investigation.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.investigation.util.FlexibleInstantDeserializer;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,6 +44,7 @@ public class AnalysisDto {
 
     @JsonProperty("generatedAt")
     @JsonAlias({"generated_at"})
+    @JsonDeserialize(using = FlexibleInstantDeserializer.class)
     private Instant generatedAt;
 
     public AnalysisDto() {}

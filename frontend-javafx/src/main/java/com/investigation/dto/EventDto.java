@@ -3,6 +3,8 @@ package com.investigation.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.investigation.util.FlexibleInstantDeserializer;
 
 import java.time.Instant;
 
@@ -16,6 +18,7 @@ import java.time.Instant;
 public class EventDto {
 
     @JsonProperty("id")
+    @JsonAlias({"event_id", "eventId"})
     private String id;
 
     @JsonProperty("caseId")
@@ -23,10 +26,11 @@ public class EventDto {
     private String caseId;
 
     @JsonProperty("evidenceId")
-    @JsonAlias({"evidence_id", "source_evidence_id"})
+    @JsonAlias({"evidence_id", "source_evidence_id", "sourceEvidenceId"})
     private String evidenceId;
 
     @JsonProperty("timestamp")
+    @JsonDeserialize(using = FlexibleInstantDeserializer.class)
     private Instant timestamp;
 
     @JsonProperty("source")
@@ -40,17 +44,34 @@ public class EventDto {
     private String user;
 
     @JsonProperty("ipAddress")
-    @JsonAlias({"ip_address", "ip"})
+    @JsonAlias({"ip_address", "ip", "source_ip", "sourceIp"})
     private String ipAddress;
 
     @JsonProperty("device")
     private String device;
 
+    @JsonProperty("destinationIp")
+    @JsonAlias({"destination_ip", "destination", "destIp", "dest_ip"})
+    private String destinationIp;
+
+    @JsonProperty("fileName")
+    @JsonAlias({"file_name", "filename", "file"})
+    private String fileName;
+
+    @JsonProperty("action")
+    private String action;
+
+    @JsonProperty("url")
+    private String url;
+
+    @JsonProperty("port")
+    private Integer port;
+
     @JsonProperty("success")
     private Boolean success;
 
     @JsonProperty("bytes")
-    @JsonAlias({"bytes_transferred"})
+    @JsonAlias({"bytes_transferred", "bytesTransferred"})
     private Long bytes;
 
     @JsonProperty("description")
@@ -93,4 +114,19 @@ public class EventDto {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getDestinationIp() { return destinationIp; }
+    public void setDestinationIp(String destinationIp) { this.destinationIp = destinationIp; }
+
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+
+    public String getAction() { return action; }
+    public void setAction(String action) { this.action = action; }
+
+    public String getUrl() { return url; }
+    public void setUrl(String url) { this.url = url; }
+
+    public Integer getPort() { return port; }
+    public void setPort(Integer port) { this.port = port; }
 }

@@ -2,6 +2,8 @@ package com.investigation.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.investigation.util.FlexibleInstantDeserializer;
 
 import java.time.Instant;
 
@@ -39,9 +41,11 @@ public class CaseDto {
     private String leadInvestigator;
 
     @JsonProperty("createdAt")
+    @JsonDeserialize(using = FlexibleInstantDeserializer.class)
     private Instant createdAt;
 
     @JsonProperty("updatedAt")
+    @JsonDeserialize(using = FlexibleInstantDeserializer.class)
     private Instant updatedAt;
 
     @JsonProperty("evidenceCount")

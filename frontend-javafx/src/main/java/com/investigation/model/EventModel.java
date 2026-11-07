@@ -20,6 +20,11 @@ public class EventModel {
     private Boolean success;
     private Long bytesTransferred;
     private String description;
+    private String destinationIp;
+    private String fileName;
+    private String action;
+    private String url;
+    private Integer port;
 
     public EventModel() {
         this.timestamp = Instant.now();
@@ -28,6 +33,13 @@ public class EventModel {
     public EventModel(String id, String caseId, String evidenceId, Instant timestamp,
                       String source, String eventType, String user, String ipAddress,
                       String device, Boolean success, Long bytesTransferred, String description) {
+        this(id, caseId, evidenceId, timestamp, source, eventType, user, ipAddress, device, success, bytesTransferred, description, null, null, null, null, null);
+    }
+
+    public EventModel(String id, String caseId, String evidenceId, Instant timestamp,
+                      String source, String eventType, String user, String ipAddress,
+                      String device, Boolean success, Long bytesTransferred, String description,
+                      String destinationIp, String fileName, String action, String url, Integer port) {
         this.id = id;
         this.caseId = caseId;
         this.evidenceId = evidenceId;
@@ -40,6 +52,11 @@ public class EventModel {
         this.success = success;
         this.bytesTransferred = bytesTransferred;
         this.description = description;
+        this.destinationIp = destinationIp;
+        this.fileName = fileName;
+        this.action = action;
+        this.url = url;
+        this.port = port;
     }
 
     public String getId() { return id; }
@@ -77,6 +94,21 @@ public class EventModel {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getDestinationIp() { return destinationIp; }
+    public void setDestinationIp(String destinationIp) { this.destinationIp = destinationIp; }
+
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+
+    public String getAction() { return action; }
+    public void setAction(String action) { this.action = action; }
+
+    public String getUrl() { return url; }
+    public void setUrl(String url) { this.url = url; }
+
+    public Integer getPort() { return port; }
+    public void setPort(Integer port) { this.port = port; }
 
     @Override
     public boolean equals(Object o) {

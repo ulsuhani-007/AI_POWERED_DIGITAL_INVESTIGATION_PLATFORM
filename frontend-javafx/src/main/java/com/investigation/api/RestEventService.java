@@ -31,11 +31,15 @@ public class RestEventService implements EventService {
 
     private EventModel mapToModel(EventDto dto) {
         if (dto == null) return null;
+        String eventId = dto.getId();
+        if (eventId == null || eventId.isBlank()) {
+            eventId = java.util.UUID.randomUUID().toString();
+        }
         return new EventModel(
-                dto.getId(),
+                eventId,
                 dto.getCaseId(),
                 dto.getEvidenceId(),
-                dto.getTimestamp(),
+                dto.getTimestamp() != null ? dto.getTimestamp() : java.time.Instant.now(),
                 dto.getSource() != null ? dto.getSource() : "Unknown Source",
                 dto.getEventType() != null ? dto.getEventType() : "GENERIC_EVENT",
                 dto.getUser(),
@@ -43,7 +47,12 @@ public class RestEventService implements EventService {
                 dto.getDevice(),
                 dto.getSuccess(),
                 dto.getBytes(),
-                dto.getDescription()
+                dto.getDescription(),
+                dto.getDestinationIp(),
+                dto.getFileName(),
+                dto.getAction(),
+                dto.getUrl(),
+                dto.getPort()
         );
     }
 }

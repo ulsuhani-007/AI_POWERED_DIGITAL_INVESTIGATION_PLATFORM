@@ -3,8 +3,11 @@ package com.investigation.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.investigation.util.FlexibleInstantDeserializer;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Data Transfer Object for Findings/Anomalies within:
@@ -23,11 +26,16 @@ public class FindingDto {
     private String eventId;
 
     @JsonProperty("timestamp")
+    @JsonDeserialize(using = FlexibleInstantDeserializer.class)
     private Instant timestamp;
 
     @JsonProperty("eventType")
-    @JsonAlias({"event_type"})
+    @JsonAlias({"event_type", "anomaly_type", "anomalyType"})
     private String eventType;
+
+    @JsonProperty("anomalyType")
+    @JsonAlias({"anomaly_type"})
+    private String anomalyType;
 
     @JsonProperty("reason")
     private String reason;
@@ -52,7 +60,11 @@ public class FindingDto {
 
     public FindingDto() {}
 
-    public String getId() { return id; }
+    public String getId() {
+        if (id != null && !id.isBlank()) return id;
+        if (eventId != null && !eventId.isBlank()) return "fnd-" + eventId;
+        return UUID.randomUUID().toString();
+    }
     public void setId(String id) { this.id = id; }
 
     public String getEventId() { return eventId; }
@@ -61,8 +73,15 @@ public class FindingDto {
     public Instant getTimestamp() { return timestamp; }
     public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
 
-    public String getEventType() { return eventType; }
+    public String getEventType() {
+        if (eventType != null && !eventType.isBlank()) return eventType;
+        if (anomalyType != null && !anomalyType.isBlank()) return anomalyType;
+        return "ANOMALY";
+    }
     public void setEventType(String eventType) { this.eventType = eventType; }
+
+    public String getAnomalyType() { return anomalyType; }
+    public void setAnomalyType(String anomalyType) { this.anomalyType = anomalyType; }
 
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }

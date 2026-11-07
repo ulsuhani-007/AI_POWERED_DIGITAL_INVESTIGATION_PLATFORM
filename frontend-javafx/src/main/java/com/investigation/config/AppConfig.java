@@ -16,7 +16,7 @@ public class AppConfig {
     private static final AppConfig INSTANCE = new AppConfig();
 
     private final StringProperty backendBaseUrl = new SimpleStringProperty("http://localhost:8080");
-    private final BooleanProperty mockModeEnabled = new SimpleBooleanProperty(true); // Default to mock mode for reliable demo
+    private final BooleanProperty mockModeEnabled = new SimpleBooleanProperty(false);
     private final ObjectProperty<CaseModel> activeCase = new SimpleObjectProperty<>(null);
     private final BooleanProperty backendConnected = new SimpleBooleanProperty(false);
     private final StringProperty systemStatusMessage = new SimpleStringProperty("SYSTEM INITIALIZED");

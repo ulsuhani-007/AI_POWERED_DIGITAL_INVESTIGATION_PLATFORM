@@ -2,6 +2,8 @@ package com.investigation.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.investigation.util.FlexibleInstantDeserializer;
 
 import java.time.Instant;
 
@@ -29,6 +31,7 @@ public class EvidenceDto {
     private Long fileSizeBytes;
 
     @JsonProperty("uploadedAt")
+    @JsonDeserialize(using = FlexibleInstantDeserializer.class)
     private Instant uploadedAt;
 
     @JsonProperty("status")
@@ -45,6 +48,10 @@ public class EvidenceDto {
 
     @JsonProperty("description")
     private String description;
+
+    @JsonProperty("uploadedBy")
+    @com.fasterxml.jackson.annotation.JsonAlias({"uploaded_by"})
+    private String uploadedBy;
 
     public EvidenceDto() {}
 
@@ -80,4 +87,7 @@ public class EvidenceDto {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getUploadedBy() { return uploadedBy; }
+    public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
 }

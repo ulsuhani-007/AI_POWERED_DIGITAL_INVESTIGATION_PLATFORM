@@ -36,9 +36,17 @@ public class RestCaseService implements CaseService {
 
     @Override
     public CaseModel createCase(CaseModel caseModel) throws Exception {
+        String caseNumber = caseModel.getCaseNumber();
+        if (caseNumber == null || caseNumber.isBlank()) {
+            caseNumber = "CASE-" + (System.currentTimeMillis() % 1000000);
+        }
+        String title = caseModel.getTitle();
+        if (title == null || title.isBlank()) {
+            title = "Investigation " + caseNumber.trim();
+        }
         CreateCaseRequest req = new CreateCaseRequest(
-                caseModel.getCaseNumber(),
-                caseModel.getTitle(),
+                caseNumber.trim(),
+                title.trim(),
                 caseModel.getDescription(),
                 caseModel.getPriority() != null ? caseModel.getPriority().name() : "MEDIUM",
                 caseModel.getLeadInvestigator()

@@ -34,8 +34,11 @@ public class ApiClient {
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
 
+        JavaTimeModule javaTimeModule = new JavaTimeModule();
+        javaTimeModule.addDeserializer(java.time.Instant.class, new com.investigation.util.FlexibleInstantDeserializer());
+
         this.objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule())
+                .registerModule(javaTimeModule)
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
@@ -51,14 +54,35 @@ public class ApiClient {
         return url;
     }
 
+    private HttpRequest.Builder applyAuth(HttpRequest.Builder builder) {
+        String authHeader = com.investigation.service.SessionService.getInstance().getAuthHeader();
+        if (authHeader != null && !authHeader.isBlank()) {
+            builder.header("Authorization", authHeader);
+        }
+        return builder;
+    }
+
+    private void checkAuthErrors(int statusCode, String uriStr) throws IOException {
+        if (statusCode == 401) {
+            com.investigation.service.SessionService.getInstance().handleUnauthorized();
+            throw new IOException("HTTP 401 Unauthorized: Session is invalid or authentication required.");
+        }
+        if (statusCode == 403) {
+            com.investigation.service.SessionService.getInstance().handleForbidden();
+            throw new IOException("HTTP 403 Forbidden: You do not have permission to perform this action.");
+        }
+    }
+
     public boolean testConnection() {
         try {
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(getBaseUrl() + "/api/cases"))
                     .timeout(Duration.ofSeconds(3))
                     .header("Accept", "application/json")
-                    .GET()
-                    .build();
+                    .GET();
+
+            applyAuth(reqBuilder);
+            HttpRequest request = reqBuilder.build();
 
             HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
             boolean success = response.statusCode() >= 200 && response.statusCode() < 500;
@@ -72,97 +96,143 @@ public class ApiClient {
 
     public <T> T get(String path, Class<T> responseClass) throws IOException, InterruptedException {
         String uriStr = getBaseUrl() + (path.startsWith("/") ? path : "/" + path);
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(uriStr))
                 .timeout(Duration.ofSeconds(10))
                 .header("Accept", "application/json")
-                .GET()
-                .build();
+                .GET();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() >= 200 && response.statusCode() < 300) {
-            return objectMapper.readValue(response.body(), responseClass);
-        } else {
-            throw new IOException("HTTP " + response.statusCode() + " on GET " + uriStr + ": " + response.body());
+        applyAuth(reqBuilder);
+        HttpRequest request = reqBuilder.build();
+
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            checkAuthErrors(response.statusCode(), uriStr);
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                AppConfig.getInstance().setBackendConnected(true);
+                return objectMapper.readValue(response.body(), responseClass);
+            } else {
+                throw new IOException("HTTP " + response.statusCode() + " on GET " + uriStr + ": " + response.body());
+            }
+        } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
+            AppConfig.getInstance().setBackendConnected(false);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
         }
     }
 
     public <T> List<T> getList(String path, Class<T> elementClass) throws IOException, InterruptedException {
         String uriStr = getBaseUrl() + (path.startsWith("/") ? path : "/" + path);
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(uriStr))
                 .timeout(Duration.ofSeconds(10))
                 .header("Accept", "application/json")
-                .GET()
-                .build();
+                .GET();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() >= 200 && response.statusCode() < 300) {
-            JavaType listType = objectMapper.getTypeFactory().constructCollectionType(List.class, elementClass);
-            return objectMapper.readValue(response.body(), listType);
-        } else if (response.statusCode() == 404) {
-            return Collections.emptyList();
-        } else {
-            throw new IOException("HTTP " + response.statusCode() + " on GET " + uriStr + ": " + response.body());
+        applyAuth(reqBuilder);
+        HttpRequest request = reqBuilder.build();
+
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            checkAuthErrors(response.statusCode(), uriStr);
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                AppConfig.getInstance().setBackendConnected(true);
+                JavaType listType = objectMapper.getTypeFactory().constructCollectionType(List.class, elementClass);
+                return objectMapper.readValue(response.body(), listType);
+            } else if (response.statusCode() == 404) {
+                return Collections.emptyList();
+            } else {
+                throw new IOException("HTTP " + response.statusCode() + " on GET " + uriStr + ": " + response.body());
+            }
+        } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
+            AppConfig.getInstance().setBackendConnected(false);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
         }
     }
 
     public <T> T post(String path, Object body, Class<T> responseClass) throws IOException, InterruptedException {
         String uriStr = getBaseUrl() + (path.startsWith("/") ? path : "/" + path);
-        String jsonBody = objectMapper.writeValueAsString(body);
+        String jsonBody = body != null ? objectMapper.writeValueAsString(body) : "";
 
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(uriStr))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                .build();
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody));
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() >= 200 && response.statusCode() < 300) {
-            if (responseClass == Void.class || response.body().isBlank()) {
-                return null;
+        applyAuth(reqBuilder);
+        HttpRequest request = reqBuilder.build();
+
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            checkAuthErrors(response.statusCode(), uriStr);
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                AppConfig.getInstance().setBackendConnected(true);
+                if (responseClass == Void.class || response.body().isBlank()) {
+                    return null;
+                }
+                return objectMapper.readValue(response.body(), responseClass);
+            } else {
+                throw new IOException("HTTP " + response.statusCode() + " on POST " + uriStr + ": " + response.body());
             }
-            return objectMapper.readValue(response.body(), responseClass);
-        } else {
-            throw new IOException("HTTP " + response.statusCode() + " on POST " + uriStr + ": " + response.body());
+        } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
+            AppConfig.getInstance().setBackendConnected(false);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
         }
     }
 
     public <T> T put(String path, Object body, Class<T> responseClass) throws IOException, InterruptedException {
         String uriStr = getBaseUrl() + (path.startsWith("/") ? path : "/" + path);
-        String jsonBody = objectMapper.writeValueAsString(body);
+        String jsonBody = body != null ? objectMapper.writeValueAsString(body) : "";
 
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(uriStr))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .PUT(HttpRequest.BodyPublishers.ofString(jsonBody))
-                .build();
+                .PUT(HttpRequest.BodyPublishers.ofString(jsonBody));
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() >= 200 && response.statusCode() < 300) {
-            if (responseClass == Void.class || response.body().isBlank()) {
-                return null;
+        applyAuth(reqBuilder);
+        HttpRequest request = reqBuilder.build();
+
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            checkAuthErrors(response.statusCode(), uriStr);
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                AppConfig.getInstance().setBackendConnected(true);
+                if (responseClass == Void.class || response.body().isBlank()) {
+                    return null;
+                }
+                return objectMapper.readValue(response.body(), responseClass);
+            } else {
+                throw new IOException("HTTP " + response.statusCode() + " on PUT " + uriStr + ": " + response.body());
             }
-            return objectMapper.readValue(response.body(), responseClass);
-        } else {
-            throw new IOException("HTTP " + response.statusCode() + " on PUT " + uriStr + ": " + response.body());
+        } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
+            AppConfig.getInstance().setBackendConnected(false);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
         }
     }
 
     public boolean delete(String path) throws IOException, InterruptedException {
         String uriStr = getBaseUrl() + (path.startsWith("/") ? path : "/" + path);
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(uriStr))
                 .timeout(Duration.ofSeconds(10))
-                .DELETE()
-                .build();
+                .DELETE();
 
-        HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
-        return response.statusCode() >= 200 && response.statusCode() < 300;
+        applyAuth(reqBuilder);
+        HttpRequest request = reqBuilder.build();
+
+        try {
+            HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+            checkAuthErrors(response.statusCode(), uriStr);
+            boolean ok = response.statusCode() >= 200 && response.statusCode() < 300;
+            if (ok) AppConfig.getInstance().setBackendConnected(true);
+            return ok;
+        } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
+            AppConfig.getInstance().setBackendConnected(false);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
+        }
     }
 
     /**
@@ -189,9 +259,9 @@ public class ApiClient {
 
         String closingBoundary = lineBreak + "--" + boundary + "--" + lineBreak;
 
-        byte[] headerBytes = headerBuilder.toString().getBytes();
-        byte[] descBytes = descBuilder.toString().getBytes();
-        byte[] closingBytes = closingBoundary.getBytes();
+        byte[] headerBytes = headerBuilder.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] descBytes = descBuilder.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] closingBytes = closingBoundary.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
         byte[] totalPayload = new byte[headerBytes.length + fileBytes.length + descBytes.length + closingBytes.length];
         System.arraycopy(headerBytes, 0, totalPayload, 0, headerBytes.length);
@@ -201,21 +271,31 @@ public class ApiClient {
 
         if (progress != null) progress.accept(0.5);
 
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(uriStr))
                 .timeout(Duration.ofSeconds(60))
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                 .header("Accept", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofByteArray(totalPayload))
-                .build();
+                .POST(HttpRequest.BodyPublishers.ofByteArray(totalPayload));
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (progress != null) progress.accept(1.0);
+        applyAuth(reqBuilder);
+        HttpRequest request = reqBuilder.build();
 
-        if (response.statusCode() >= 200 && response.statusCode() < 300) {
-            return objectMapper.readValue(response.body(), responseClass);
-        } else {
-            throw new IOException("HTTP " + response.statusCode() + " on file upload: " + response.body());
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (progress != null) progress.accept(1.0);
+
+            checkAuthErrors(response.statusCode(), uriStr);
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                AppConfig.getInstance().setBackendConnected(true);
+                return objectMapper.readValue(response.body(), responseClass);
+            } else {
+                throw new IOException("HTTP " + response.statusCode() + " on file upload: " + response.body());
+            }
+        } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
+            AppConfig.getInstance().setBackendConnected(false);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
         }
     }
 

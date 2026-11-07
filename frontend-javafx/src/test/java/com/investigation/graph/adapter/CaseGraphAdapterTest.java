@@ -63,4 +63,40 @@ class CaseGraphAdapterTest {
         assertTrue(hasEvidence, "Graph should contain Evidence node");
         assertTrue(hasEvent, "Graph should contain Event node");
     }
+
+    @Test
+    void testRealForensicAttributesAndZeroFakeNodes() {
+        CaseGraphAdapter adapter = new CaseGraphAdapter();
+
+        CaseModel cm = new CaseModel("case-real", "CASE-2026-REAL", "Real Forensics Case", "Desc",
+                CaseStatus.OPEN, CasePriority.HIGH, "investigator", Instant.now(), Instant.now(), 1, 1, 0);
+
+        EventModel evt = new EventModel(
+                "evt-real-1", "case-real", "ev-real", Instant.now(),
+                "network", "FILE_EXFILTRATION", "attacker", "192.168.1.100", "SERVER-01",
+                true, 1048576L, "Exfiltration of secret.docx",
+                "198.51.100.99", "secret.docx", "UPLOAD", "https://c2.evil.com/upload", 443
+        );
+
+        GraphData graph = adapter.buildGraph(cm, List.of(), List.of(evt), List.of());
+
+        assertNotNull(graph);
+        // Verify File and URL and Destination IP nodes exist
+        boolean hasFile = false;
+        boolean hasUrl = false;
+        boolean hasDestIp = false;
+        boolean hasFakeLocation = false;
+
+        for (GraphNode node : graph.getNodes()) {
+            if (node.getType() == NodeType.FILE) hasFile = true;
+            if (node.getType() == NodeType.URL) hasUrl = true;
+            if (node.getType() == NodeType.IP_ADDRESS && node.getLabel().equals("198.51.100.99")) hasDestIp = true;
+            if (node.getType() == NodeType.LOCATION) hasFakeLocation = true;
+        }
+
+        assertTrue(hasFile, "Graph should contain FILE node for secret.docx");
+        assertTrue(hasUrl, "Graph should contain URL node for c2 url");
+        assertTrue(hasDestIp, "Graph should contain destination IP node");
+        assertFalse(hasFakeLocation, "Graph must NOT contain fake/simulated LOCATION nodes");
+    }
 }

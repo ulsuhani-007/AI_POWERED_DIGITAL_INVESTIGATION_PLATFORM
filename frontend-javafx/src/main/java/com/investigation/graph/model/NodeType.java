@@ -3,12 +3,14 @@ package com.investigation.graph.model;
 import javafx.scene.paint.Color;
 
 public enum NodeType {
-    PERSON("Person / User", "#00F0FF", "👤", Color.web("#00F0FF")),
-    DEVICE("Endpoint / Device", "#A855F7", "💻", Color.web("#A855F7")),
-    IP_ADDRESS("IP Address", "#F59E0B", "🌐", Color.web("#F59E0B")),
-    EVENT("Investigation Event", "#3B82F6", "⚡", Color.web("#3B82F6")),
-    EVIDENCE("Evidence Source", "#10B981", "📁", Color.web("#10B981")),
-    LOCATION("Geographic Location", "#F43F5E", "📍", Color.web("#F43F5E"));
+    PERSON("Person", "#2563EB", "👤", Color.web("#2563EB")),
+    DEVICE("Device", "#0284C7", "💻", Color.web("#0284C7")),
+    IP_ADDRESS("IP Address", "#0284C7", "🌐", Color.web("#0284C7")),
+    EVENT("Event", "#DC2626", "⚡", Color.web("#DC2626")),
+    EVIDENCE("Evidence", "#1E40AF", "📁", Color.web("#1E40AF")),
+    FILE("File", "#475569", "📄", Color.web("#475569")),
+    URL("Web URL", "#0284C7", "🔗", Color.web("#0284C7")),
+    LOCATION("Location", "#D97706", "📍", Color.web("#D97706"));
 
     private final String displayName;
     private final String colorHex;

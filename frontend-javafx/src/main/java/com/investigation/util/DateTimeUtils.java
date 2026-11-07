@@ -32,15 +32,29 @@ public final class DateTimeUtils {
         if (text == null || text.isBlank()) {
             return fallback;
         }
+        String trimmed = text.trim();
         try {
-            return Instant.parse(text);
+            return Instant.parse(trimmed);
         } catch (DateTimeParseException e1) {
             try {
-                return OffsetDateTime.parse(text).toInstant();
+                return OffsetDateTime.parse(trimmed).toInstant();
             } catch (DateTimeParseException e2) {
                 try {
-                    return LocalDateTime.parse(text).toInstant(ZoneOffset.UTC);
+                    return LocalDateTime.parse(trimmed).toInstant(ZoneOffset.UTC);
                 } catch (DateTimeParseException e3) {
+                    try {
+                        if (trimmed.contains(" ")) {
+                            return LocalDateTime.parse(trimmed.replace(" ", "T")).toInstant(ZoneOffset.UTC);
+                        }
+                    } catch (DateTimeParseException ignored) {}
+                    try {
+                        long epoch = Long.parseLong(trimmed);
+                        if (epoch > 100000000000L) {
+                            return Instant.ofEpochMilli(epoch);
+                        } else {
+                            return Instant.ofEpochSecond(epoch);
+                        }
+                    } catch (NumberFormatException ignored) {}
                     return fallback;
                 }
             }

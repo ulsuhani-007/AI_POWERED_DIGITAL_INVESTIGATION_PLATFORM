@@ -456,11 +456,22 @@ public class RelationshipGraphView extends Pane {
         if (width <= 0 || height <= 0) return;
 
         // Background
-        gc.setFill(Color.web("#090D16"));
+        gc.setFill(Color.web("#FFFFFF"));
         gc.fillRect(0, 0, width, height);
 
-        // Grid lines (futuristic coordinate mesh)
+        // Grid lines (subtle layout mesh)
         drawCyberGrid(gc, width, height);
+
+        if (graphData.getNodes().isEmpty()) {
+            gc.setFill(Color.web("#64748B"));
+            gc.setFont(Font.font("System", FontWeight.BOLD, 14));
+            gc.setTextAlign(TextAlignment.CENTER);
+            gc.fillText("Insufficient evidence relationships to construct a graph.", width / 2.0, height / 2.0 - 10);
+            gc.setFont(Font.font("System", FontWeight.NORMAL, 12));
+            gc.setFill(Color.web("#94A3B8"));
+            gc.fillText("Upload and process evidence to generate entity connections.", width / 2.0, height / 2.0 + 15);
+            return;
+        }
 
         gc.save();
         gc.translate(panX, panY);
@@ -485,7 +496,7 @@ public class RelationshipGraphView extends Pane {
     }
 
     private void drawCyberGrid(GraphicsContext gc, double width, double height) {
-        gc.setStroke(Color.web("#10192A"));
+        gc.setStroke(Color.web("#F1F5F9"));
         gc.setLineWidth(1.0);
 
         double gridSize = 40.0 * zoom.get();
@@ -511,11 +522,11 @@ public class RelationshipGraphView extends Pane {
         double x2 = t.getX();
         double y2 = t.getY();
 
-        double opacity = edge.isDimmed() ? 0.15 : (edge.isHighlighted() ? 1.0 : 0.45);
-        Color strokeColor = edge.isHighlighted() ? Color.web("#00F0FF") : Color.web("#38BDF8");
+        double opacity = edge.isDimmed() ? 0.15 : (edge.isHighlighted() ? 1.0 : 0.65);
+        Color strokeColor = edge.isHighlighted() ? Color.web("#2563EB") : Color.web("#CBD5E1");
 
         gc.setStroke(Color.color(strokeColor.getRed(), strokeColor.getGreen(), strokeColor.getBlue(), opacity));
-        gc.setLineWidth(edge.isHighlighted() ? 2.5 : 1.2);
+        gc.setLineWidth(edge.isHighlighted() ? 2.5 : 1.4);
         gc.strokeLine(x1, y1, x2, y2);
 
         // Draw edge relationship label at midpoint
@@ -529,14 +540,14 @@ public class RelationshipGraphView extends Pane {
                 double textWidth = label.length() * 5.5 + 8;
                 double textHeight = 14;
 
-                gc.setFill(Color.web("#0B132B", opacity > 0.7 ? 0.9 : 0.6));
+                gc.setFill(Color.web("#FFFFFF", opacity > 0.7 ? 0.95 : 0.8));
                 gc.fillRoundRect(midX - textWidth / 2.0, midY - textHeight / 2.0, textWidth, textHeight, 4, 4);
 
-                gc.setStroke(Color.web("#1E293B", opacity));
+                gc.setStroke(Color.web("#E2E8F0", opacity));
                 gc.setLineWidth(0.8);
                 gc.strokeRoundRect(midX - textWidth / 2.0, midY - textHeight / 2.0, textWidth, textHeight, 4, 4);
 
-                gc.setFill(Color.web("#94A3B8", opacity));
+                gc.setFill(Color.web("#475569", opacity));
                 gc.setTextAlign(TextAlignment.CENTER);
                 gc.fillText(label, midX, midY + 4);
             }
@@ -548,47 +559,43 @@ public class RelationshipGraphView extends Pane {
         double y = node.getY();
         double r = node.getRadius();
 
-        Color baseColor = node.getType().getFxColor();
+        boolean isSuspect = node.getLabel() != null && node.getLabel().toLowerCase().contains("suspect");
+        Color baseColor = isSuspect ? Color.web("#DC2626") : node.getType().getFxColor();
         double opacity = node.isDimmed() ? 0.20 : 1.0;
 
-        // Glowing outer halo for highlighted or selected node
+        // Outer halo for highlighted or selected node
         if (node.isHighlighted() || node.equals(selectedNode)) {
             gc.save();
             gc.setStroke(Color.color(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), 0.35 * opacity));
-            gc.setLineWidth(10.0);
+            gc.setLineWidth(8.0);
             gc.strokeOval(x - r - 4, y - r - 4, (r + 4) * 2, (r + 4) * 2);
             gc.restore();
         }
 
-        // Outer border ring
-        gc.setStroke(Color.color(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), opacity));
-        gc.setLineWidth(node.equals(selectedNode) ? 3.0 : (node.isHighlighted() ? 2.2 : 1.5));
-
-        // Radial fill gradient inside node
-        LinearGradient grad = new LinearGradient(
-                0, 0, 1, 1, true, CycleMethod.NO_CYCLE,
-                new Stop(0, Color.web("#1E293B", opacity)),
-                new Stop(1, Color.web("#0F172A", opacity))
-        );
-        gc.setFill(grad);
+        // Solid circle with baseColor
+        gc.setFill(Color.color(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), opacity));
         gc.fillOval(x - r, y - r, r * 2, r * 2);
+
+        // White border ring
+        gc.setStroke(Color.WHITE);
+        gc.setLineWidth(2.0);
         gc.strokeOval(x - r, y - r, r * 2, r * 2);
 
-        // Icon symbol in center
+        // White icon symbol in center
         gc.setFont(iconFont);
-        gc.setFill(Color.color(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), opacity));
+        gc.setFill(Color.WHITE);
         gc.setTextAlign(TextAlignment.CENTER);
         gc.fillText(node.getType().getIconSymbol(), x, y + 5);
 
         // Node Label below node
         if (!node.isDimmed()) {
             gc.setFont(labelFont);
-            gc.setFill(Color.web("#F8FAFC", opacity));
+            gc.setFill(Color.web("#0F172A", opacity));
             gc.fillText(node.getLabel(), x, y + r + 14);
 
             if (node.getSubtitle() != null && !node.getSubtitle().isBlank()) {
                 gc.setFont(subtitleFont);
-                gc.setFill(Color.color(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), 0.85 * opacity));
+                gc.setFill(Color.web("#64748B", opacity));
                 gc.fillText(node.getSubtitle(), x, y + r + 26);
             }
         }

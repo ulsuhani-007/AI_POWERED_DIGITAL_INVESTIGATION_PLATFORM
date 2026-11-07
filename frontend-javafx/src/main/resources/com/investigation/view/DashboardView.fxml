@@ -6,27 +6,23 @@
 
 <StackPane fx:id="overlayPane" stylesheets="@../css/theme.css"
            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.investigation.controller.DashboardController">
+           fx:controller="com.investigation.controller.DashboardController"
+           style="-fx-background-color: #F1F5F9;">
 
-    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
-        <VBox spacing="16.0" style="-fx-padding: 20px;">
+    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F1F5F9;">
+        <VBox spacing="18.0" style="-fx-padding: 24px;">
 
-            <!-- Header and Mock Data Notice Banner -->
-            <VBox spacing="6.0">
-                <HBox alignment="CENTER_LEFT" spacing="12.0">
-                    <Label text="OPERATIONAL DASHBOARD" styleClass="section-title" style="-fx-font-size: 18px;"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Button text="🔄 Refresh Stats" onAction="#refreshData" styleClass="btn-secondary"/>
+            <!-- Header -->
+            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                <HBox alignment="CENTER_LEFT" spacing="8.0">
+                    <Label text="🏠" style="-fx-font-size: 18px; -fx-text-fill: #0F172A;"/>
+                    <Label text="Investigation Dashboard" style="-fx-font-size: 20px; -fx-font-weight: 800; -fx-text-fill: #0F172A;"/>
                 </HBox>
-                <Label text="Global investigation metrics, threat telemetry summaries, and active incident streams." styleClass="section-subtitle"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="🔄 Refresh Stats" onAction="#refreshData" styleClass="btn-secondary"/>
+            </HBox>
 
-                <!-- Clearly identified mock data notice -->
-                <Label fx:id="mockNoticeLabel"
-                       text="⚠️ [DEMO MODE ACTIVE] Rendering synthetic digital forensics telemetry. Connect Spring Boot backend (port 8080) and toggle mode in top header for live operational feeds."
-                       style="-fx-background-color: rgba(245, 158, 11, 0.12); -fx-border-color: #F59E0B; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-text-fill: #F59E0B; -fx-padding: 8px 12px; -fx-font-size: 11px; -fx-font-weight: bold;"/>
-            </VBox>
-
-            <!-- 4 Key Stat Cards -->
+            <!-- 4 Key Metric Cards (Matching Reference Image Exactly) -->
             <GridPane hgap="16.0" vgap="16.0">
                 <columnConstraints>
                     <ColumnConstraints percentWidth="25.0"/>
@@ -35,89 +31,205 @@
                     <ColumnConstraints percentWidth="25.0"/>
                 </columnConstraints>
 
-                <!-- 1. Total Cases -->
-                <VBox GridPane.columnIndex="0" styleClass="cyber-card">
-                    <HBox alignment="CENTER_LEFT">
-                        <Label text="TOTAL CASES" styleClass="stat-label"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label text="📁" style="-fx-text-fill: #00F0FF; -fx-font-size: 16px;"/>
+                <!-- 1. Active Cases (Blue Folder Icon) -->
+                <VBox fx:id="cardActiveCases" GridPane.columnIndex="0" styleClass="white-card" spacing="8.0"
+                      style="-fx-cursor: hand;">
+                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                        <StackPane style="-fx-background-color: #EFF6FF; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px;">
+                            <Label text="📁" style="-fx-font-size: 18px; -fx-text-fill: #2563EB;"/>
+                        </StackPane>
+                        <VBox spacing="2.0">
+                            <Label text="Active Cases" styleClass="stat-label"/>
+                            <Label fx:id="totalCasesLabel" text="6" styleClass="stat-value"/>
+                        </VBox>
                     </HBox>
-                    <Label fx:id="totalCasesLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #00F0FF;"/>
-                    <Label fx:id="openCasesLabel" text="-- Active" style="-fx-font-size: 11px; -fx-text-fill: #10B981; -fx-font-weight: bold;"/>
                 </VBox>
 
-                <!-- 2. Total Evidence Records -->
-                <VBox GridPane.columnIndex="1" styleClass="cyber-card">
-                    <HBox alignment="CENTER_LEFT">
-                        <Label text="TOTAL EVIDENCE RECORDS" styleClass="stat-label"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label text="🗄️" style="-fx-text-fill: #38BDF8; -fx-font-size: 16px;"/>
+                <!-- 2. Evidence Items (Purple Document Icon) -->
+                <VBox fx:id="cardEvidenceItems" GridPane.columnIndex="1" styleClass="white-card" spacing="8.0"
+                      style="-fx-cursor: hand;">
+                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                        <StackPane style="-fx-background-color: #F5F3FF; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px;">
+                            <Label text="📄" style="-fx-font-size: 18px; -fx-text-fill: #7C3AED;"/>
+                        </StackPane>
+                        <VBox spacing="2.0">
+                            <Label text="Evidence Items" styleClass="stat-label"/>
+                            <Label fx:id="totalEvidenceLabel" text="124" styleClass="stat-value"/>
+                        </VBox>
                     </HBox>
-                    <Label fx:id="totalEvidenceLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #38BDF8;"/>
-                    <Label text="CSV / PCAP / Logs" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
                 </VBox>
 
-                <!-- 3. Total Processed Events -->
-                <VBox GridPane.columnIndex="2" styleClass="cyber-card">
-                    <HBox alignment="CENTER_LEFT">
-                        <Label text="TOTAL PROCESSED EVENTS" styleClass="stat-label"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label text="⚡" style="-fx-text-fill: #A855F7; -fx-font-size: 16px;"/>
+                <!-- 3. Processed Events (Orange Calendar Icon) -->
+                <VBox fx:id="cardProcessedEvents" GridPane.columnIndex="2" styleClass="white-card" spacing="8.0"
+                      style="-fx-cursor: hand;">
+                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                        <StackPane style="-fx-background-color: #FFF7ED; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px;">
+                            <Label text="📅" style="-fx-font-size: 18px; -fx-text-fill: #EA580C;"/>
+                        </StackPane>
+                        <VBox spacing="2.0">
+                            <Label text="Processed Events" styleClass="stat-label"/>
+                            <Label fx:id="totalEventsLabel" text="8,742" styleClass="stat-value"/>
+                        </VBox>
                     </HBox>
-                    <Label fx:id="totalEventsLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #A855F7;"/>
-                    <Label text="M2 Normalized Ingest" style="-fx-font-size: 11px; -fx-text-fill: #64748B;"/>
                 </VBox>
 
-                <!-- 4. Total Anomalies -->
-                <VBox GridPane.columnIndex="3" styleClass="cyber-card-highlight">
-                    <HBox alignment="CENTER_LEFT">
-                        <Label text="TOTAL ANOMALIES" styleClass="stat-label"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label text="🚨" style="-fx-text-fill: #EF4444; -fx-font-size: 16px;"/>
+                <!-- 4. Detected Anomalies (Red Warning Icon) -->
+                <VBox fx:id="cardDetectedAnomalies" GridPane.columnIndex="3" styleClass="white-card" spacing="8.0"
+                      style="-fx-cursor: hand;">
+                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                        <StackPane style="-fx-background-color: #FEF2F2; -fx-background-radius: 8px; -fx-min-width: 44px; -fx-min-height: 44px; -fx-max-width: 44px; -fx-max-height: 44px;">
+                            <Label text="⚠️" style="-fx-font-size: 18px; -fx-text-fill: #DC2626;"/>
+                        </StackPane>
+                        <VBox spacing="2.0">
+                            <Label text="Detected Anomalies" styleClass="stat-label"/>
+                            <Label fx:id="totalAnomaliesLabel" text="27" styleClass="stat-value"/>
+                        </VBox>
                     </HBox>
-                    <Label fx:id="totalAnomaliesLabel" text="--" styleClass="stat-value" style="-fx-text-fill: #EF4444;"/>
-                    <Label fx:id="criticalAnomaliesLabel" text="-- Critical" style="-fx-font-size: 11px; -fx-text-fill: #EF4444; -fx-font-weight: bold;"/>
                 </VBox>
             </GridPane>
 
-            <!-- Lower Split: Case Summaries Table (Left) & Recent Activity (Right) -->
-            <GridPane hgap="16.0" vgap="16.0">
+            <!-- Middle Section (Two Columns) -->
+            <GridPane hgap="18.0" vgap="18.0">
                 <columnConstraints>
-                    <ColumnConstraints percentWidth="65.0"/>
-                    <ColumnConstraints percentWidth="35.0"/>
+                    <ColumnConstraints percentWidth="52.0"/>
+                    <ColumnConstraints percentWidth="48.0"/>
                 </columnConstraints>
 
-                <!-- Active Cases Summary Table -->
-                <VBox GridPane.columnIndex="0" spacing="10.0" styleClass="cyber-card">
-                    <HBox alignment="CENTER_LEFT">
-                        <Label text="ACTIVE CASES SUMMARY" styleClass="section-title"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label text="Double-click row to select as Active Case" style="-fx-font-size: 10px; -fx-text-fill: #64748B;"/>
-                    </HBox>
-                    <TableView fx:id="casesSummaryTable" prefHeight="380.0">
-                        <columns>
-                            <TableColumn fx:id="colCaseNumber" text="CASE #" prefWidth="120.0"/>
-                            <TableColumn fx:id="colTitle" text="TITLE / SCOPE" prefWidth="250.0"/>
-                            <TableColumn fx:id="colPriority" text="PRIORITY" prefWidth="90.0"/>
-                            <TableColumn fx:id="colStatus" text="STATUS" prefWidth="95.0"/>
-                            <TableColumn fx:id="colEvents" text="EVENTS" prefWidth="75.0"/>
-                            <TableColumn fx:id="colAnomalies" text="ANOMALIES" prefWidth="85.0"/>
-                        </columns>
-                        <placeholder>
-                            <Label text="No cases available."/>
-                        </placeholder>
-                    </TableView>
+                <!-- Left Column: Recent Cases & Anomaly Overview -->
+                <VBox GridPane.columnIndex="0" spacing="16.0">
+
+                    <!-- Recent Cases Card -->
+                    <VBox spacing="12.0" styleClass="white-card">
+                        <HBox alignment="CENTER_LEFT">
+                            <Label text="Recent Cases" styleClass="section-title"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Hyperlink fx:id="viewAllCasesLink" text="View All →" onAction="#onViewAllCases"
+                                       style="-fx-text-fill: #2563EB; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 0;"/>
+                        </HBox>
+
+                        <!-- Recent Cases List Container -->
+                        <VBox fx:id="recentCasesContainer" spacing="10.0"/>
+                    </VBox>
+
+                    <!-- Anomaly Overview Card -->
+                    <VBox spacing="12.0" styleClass="white-card">
+                        <Label text="Anomaly Overview" styleClass="section-title"/>
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <!-- Critical Pill -->
+                            <HBox alignment="CENTER_LEFT" spacing="6.0" styleClass="badge-high"
+                                  style="-fx-background-color: #FEF2F2; -fx-border-color: #FECACA; -fx-padding: 5px 12px; -fx-background-radius: 16px; -fx-border-radius: 16px;">
+                                <Label text="●" style="-fx-text-fill: #DC2626; -fx-font-size: 10px;"/>
+                                <Label fx:id="criticalCountBadge" text="Critical 4" style="-fx-text-fill: #DC2626; -fx-font-weight: bold; -fx-font-size: 11px;"/>
+                            </HBox>
+
+                            <!-- High Pill -->
+                            <HBox alignment="CENTER_LEFT" spacing="6.0"
+                                  style="-fx-background-color: #FFF7ED; -fx-border-color: #FED7AA; -fx-padding: 5px 12px; -fx-background-radius: 16px; -fx-border-radius: 16px;">
+                                <Label text="●" style="-fx-text-fill: #EA580C; -fx-font-size: 10px;"/>
+                                <Label fx:id="highCountBadge" text="High 9" style="-fx-text-fill: #EA580C; -fx-font-weight: bold; -fx-font-size: 11px;"/>
+                            </HBox>
+
+                            <!-- Medium Pill -->
+                            <HBox alignment="CENTER_LEFT" spacing="6.0"
+                                  style="-fx-background-color: #FEF3C7; -fx-border-color: #FDE68A; -fx-padding: 5px 12px; -fx-background-radius: 16px; -fx-border-radius: 16px;">
+                                <Label text="●" style="-fx-text-fill: #D97706; -fx-font-size: 10px;"/>
+                                <Label fx:id="mediumCountBadge" text="Medium 8" style="-fx-text-fill: #D97706; -fx-font-weight: bold; -fx-font-size: 11px;"/>
+                            </HBox>
+
+                            <!-- Low Pill -->
+                            <HBox alignment="CENTER_LEFT" spacing="6.0"
+                                  style="-fx-background-color: #E0F2FE; -fx-border-color: #BAE6FD; -fx-padding: 5px 12px; -fx-background-radius: 16px; -fx-border-radius: 16px;">
+                                <Label text="●" style="-fx-text-fill: #0284C7; -fx-font-size: 10px;"/>
+                                <Label fx:id="lowCountBadge" text="Low 6" style="-fx-text-fill: #0284C7; -fx-font-weight: bold; -fx-font-size: 11px;"/>
+                            </HBox>
+                        </HBox>
+                    </VBox>
+
                 </VBox>
 
-                <!-- Recent Investigation Activity Stream -->
-                <VBox GridPane.columnIndex="1" spacing="10.0" styleClass="cyber-card">
-                    <Label text="RECENT INVESTIGATION ACTIVITY" styleClass="section-title"/>
-                    <Label text="Real-time timeline of evidence ingest and detections" styleClass="section-subtitle"/>
-                    <ScrollPane fitToWidth="true" prefHeight="380.0" style="-fx-background-color: transparent;">
-                        <VBox fx:id="recentActivityContainer" spacing="8.0">
-                            <!-- Populated dynamically -->
+                <!-- Right Column: Investigation Overview & Recent Activity -->
+                <VBox GridPane.columnIndex="1" spacing="16.0">
+
+                    <!-- Investigation Overview (5-step process indicator) -->
+                    <VBox spacing="14.0" styleClass="white-card">
+                        <Label text="Investigation Overview" styleClass="section-title"/>
+
+                        <!-- Process Flow Stepper -->
+                        <HBox alignment="CENTER" spacing="8.0" style="-fx-padding: 10 0 10 0;">
+                            <!-- Step 1: Evidence -->
+                            <VBox alignment="CENTER" spacing="6.0">
+                                <StackPane style="-fx-background-color: #0F172A; -fx-background-radius: 50%; -fx-min-width: 38px; -fx-min-height: 38px; -fx-max-width: 38px; -fx-max-height: 38px;">
+                                    <Label text="📁" style="-fx-font-size: 14px; -fx-text-fill: #FFFFFF;"/>
+                                </StackPane>
+                                <Label text="Evidence" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                            </VBox>
+
+                            <Label text="➔" style="-fx-font-size: 14px; -fx-text-fill: #94A3B8; -fx-padding: 0 4 14 4;"/>
+
+                            <!-- Step 2: Processing -->
+                            <VBox alignment="CENTER" spacing="6.0">
+                                <StackPane style="-fx-background-color: #1E3A8A; -fx-background-radius: 50%; -fx-min-width: 38px; -fx-min-height: 38px; -fx-max-width: 38px; -fx-max-height: 38px;">
+                                    <Label text="⚙" style="-fx-font-size: 14px; -fx-text-fill: #FFFFFF;"/>
+                                </StackPane>
+                                <Label text="Processing" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                            </VBox>
+
+                            <Label text="➔" style="-fx-font-size: 14px; -fx-text-fill: #94A3B8; -fx-padding: 0 4 14 4;"/>
+
+                            <!-- Step 3: Events -->
+                            <VBox alignment="CENTER" spacing="6.0">
+                                <StackPane style="-fx-background-color: #1D4ED8; -fx-background-radius: 50%; -fx-min-width: 38px; -fx-min-height: 38px; -fx-max-width: 38px; -fx-max-height: 38px;">
+                                    <Label text="⚡" style="-fx-font-size: 14px; -fx-text-fill: #FFFFFF;"/>
+                                </StackPane>
+                                <Label text="Events" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                            </VBox>
+
+                            <Label text="➔" style="-fx-font-size: 14px; -fx-text-fill: #94A3B8; -fx-padding: 0 4 14 4;"/>
+
+                            <!-- Step 4: Analysis -->
+                            <VBox alignment="CENTER" spacing="6.0">
+                                <StackPane style="-fx-background-color: #2563EB; -fx-background-radius: 50%; -fx-min-width: 38px; -fx-min-height: 38px; -fx-max-width: 38px; -fx-max-height: 38px;">
+                                    <Label text="🔍" style="-fx-font-size: 14px; -fx-text-fill: #FFFFFF;"/>
+                                </StackPane>
+                                <Label text="Analysis" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                            </VBox>
+
+                            <Label text="➔" style="-fx-font-size: 14px; -fx-text-fill: #94A3B8; -fx-padding: 0 4 14 4;"/>
+
+                            <!-- Step 5: Findings -->
+                            <VBox alignment="CENTER" spacing="6.0">
+                                <StackPane style="-fx-background-color: #D97706; -fx-background-radius: 50%; -fx-min-width: 38px; -fx-min-height: 38px; -fx-max-width: 38px; -fx-max-height: 38px;">
+                                    <Label text="⚖" style="-fx-font-size: 14px; -fx-text-fill: #FFFFFF;"/>
+                                </StackPane>
+                                <Label text="Findings" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #0F172A;"/>
+                            </VBox>
+                        </HBox>
+
+                        <Separator/>
+
+                        <!-- Progress Bar Container -->
+                        <VBox spacing="6.0">
+                            <HBox alignment="CENTER_LEFT">
+                                <Label text="Investigation Progress" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #64748B;"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Label fx:id="progressPercentLabel" text="78%" style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #10B981;"/>
+                            </HBox>
+                            <ProgressBar fx:id="investigationProgressBar" progress="0.78" maxWidth="Infinity"
+                                         style="-fx-accent: #10B981; -fx-pref-height: 8px;"/>
                         </VBox>
-                    </ScrollPane>
+                    </VBox>
+
+                    <!-- Recent Activity Card -->
+                    <VBox spacing="12.0" styleClass="white-card">
+                        <HBox alignment="CENTER_LEFT">
+                            <Label text="Recent Activity" styleClass="section-title"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Hyperlink fx:id="viewAllActivityLink" text="View All →" onAction="#onViewAllTimeline"
+                                       style="-fx-text-fill: #2563EB; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 0;"/>
+                        </HBox>
+                        <VBox fx:id="recentActivityContainer" spacing="10.0"/>
+                    </VBox>
+
                 </VBox>
             </GridPane>
 

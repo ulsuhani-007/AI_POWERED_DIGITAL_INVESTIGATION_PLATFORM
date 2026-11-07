@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<HBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.investigation.controller.LoginController"
+      stylesheets="@../css/theme.css"
+      style="-fx-background-color: #FFFFFF;"
+      prefWidth="1280.0" prefHeight="820.0">
+
+    <!-- Left Half: Realistic Detective Investigation Scene Photo -->
+    <StackPane HBox.hgrow="ALWAYS" style="-fx-background-color: #0B132B;">
+        <ImageView fitWidth="680.0" fitHeight="820.0" preserveRatio="false">
+            <image>
+                <Image url="@../images/login_desk.jpg"/>
+            </image>
+        </ImageView>
+    </StackPane>
+
+    <!-- Right Half: Clean, Elegant White Login Card Panel -->
+    <VBox alignment="CENTER" HBox.hgrow="ALWAYS" style="-fx-background-color: #FFFFFF; -fx-padding: 40px;">
+        <VBox alignment="CENTER" spacing="16" maxWidth="380">
+
+            <!-- Shield Crest Logo -->
+            <ImageView fitHeight="68.0" fitWidth="68.0" preserveRatio="true">
+                <image>
+                    <Image url="@../images/shield_crest.png"/>
+                </image>
+            </ImageView>
+
+            <!-- Brand Header -->
+            <VBox alignment="CENTER" spacing="4">
+                <Label text="AI-Powered" style="-fx-font-size: 22px; -fx-font-weight: 900; -fx-text-fill: #0F172A;"/>
+                <Label text="Digital Investigation Platform" style="-fx-font-size: 20px; -fx-font-weight: 800; -fx-text-fill: #0F172A;"/>
+                <Label text="Investigate  •  Analyze  •  Uncover" style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #64748B; -fx-padding: 4 0 10 0;"/>
+            </VBox>
+
+            <!-- Input Fields Container -->
+            <VBox spacing="14" maxWidth="360" style="-fx-padding: 10 0 10 0;">
+                <!-- Username -->
+                <VBox spacing="6">
+                    <Label text="Username" style="-fx-font-size: 12px; -fx-font-weight: 700; -fx-text-fill: #334155;"/>
+                    <HBox alignment="CENTER_LEFT" spacing="8"
+                          style="-fx-background-color: #FFFFFF; -fx-border-color: #CBD5E1; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-padding: 2 10 2 10;">
+                        <Label text="👤" style="-fx-font-size: 13px; -fx-text-fill: #94A3B8;"/>
+                        <TextField fx:id="usernameField" promptText="Enter username..."
+                                   style="-fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 8 0 8 0; -fx-font-size: 13px;"
+                                   HBox.hgrow="ALWAYS"/>
+                    </HBox>
+                </VBox>
+
+                <!-- Password -->
+                <VBox spacing="6">
+                    <Label text="Password" style="-fx-font-size: 12px; -fx-font-weight: 700; -fx-text-fill: #334155;"/>
+                    <HBox alignment="CENTER_LEFT" spacing="8"
+                          style="-fx-background-color: #FFFFFF; -fx-border-color: #CBD5E1; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-padding: 2 10 2 10;">
+                        <Label text="🔒" style="-fx-font-size: 13px; -fx-text-fill: #94A3B8;"/>
+                        <PasswordField fx:id="passwordField" promptText="Enter password..."
+                                       style="-fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 8 0 8 0; -fx-font-size: 13px;"
+                                       HBox.hgrow="ALWAYS"/>
+                    </HBox>
+                </VBox>
+            </VBox>
+
+            <!-- Status / Error Label -->
+            <Label fx:id="statusMessageLabel" text="" wrapText="true" visible="false" managed="false"
+                   style="-fx-font-size: 11px; -fx-padding: 8px 12px; -fx-background-color: #FEF2F2; -fx-text-fill: #DC2626; -fx-border-color: #FECACA; -fx-border-radius: 6px; -fx-background-radius: 6px;"/>
+
+            <!-- Login Button -->
+            <Button fx:id="signInButton" text="Login" onAction="#onSignIn" defaultButton="true"
+                    maxWidth="Infinity"
+                    style="-fx-background-color: #2563EB; -fx-text-fill: #FFFFFF; -fx-font-weight: 800; -fx-font-size: 14px; -fx-padding: 10px; -fx-background-radius: 6px; -fx-cursor: hand;"/>
+
+            <!-- Progress bar -->
+            <ProgressBar fx:id="loginProgressBar" maxWidth="Infinity" visible="false" managed="false"
+                         style="-fx-accent: #2563EB;"/>
+
+            <!-- Quick Profiles -->
+            <HBox alignment="CENTER" spacing="12" style="-fx-padding: 6 0 0 0;">
+                <Hyperlink text="👤 Investigator" onAction="#onSelectInvestigatorPreset"
+                           style="-fx-text-fill: #2563EB; -fx-font-size: 11px; -fx-padding: 0;"/>
+                <Label text="•" style="-fx-text-fill: #CBD5E1;"/>
+                <Hyperlink text="🔑 Administrator" onAction="#onSelectAdminPreset"
+                           style="-fx-text-fill: #D97706; -fx-font-size: 11px; -fx-padding: 0;"/>
+            </HBox>
+
+            <!-- Footer: Secure Access -->
+            <HBox alignment="CENTER" spacing="6" style="-fx-padding: 16 0 0 0;">
+                <Label text="🔒" style="-fx-font-size: 12px; -fx-text-fill: #64748B;"/>
+                <Label text="Secure Access" style="-fx-font-size: 12px; -fx-font-weight: 600; -fx-text-fill: #64748B;"/>
+            </HBox>
+
+        </VBox>
+    </VBox>
+
+</HBox>
