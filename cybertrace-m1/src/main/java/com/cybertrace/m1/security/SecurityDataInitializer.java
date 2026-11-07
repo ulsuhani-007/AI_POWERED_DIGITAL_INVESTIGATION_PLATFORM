@@ -39,10 +39,9 @@ public class SecurityDataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (userRepository.count() == 0) {
-            log.info("No user accounts found in database. Seeding initial platform users...");
-
-            // Seed default administrator
+        // Idempotent initialization of the Universal Demo Administrator account (admin / AdminPass123!)
+        if (!userRepository.existsByUsername("admin")) {
+            log.info("Universal demo admin account not found in database. Initializing 'admin' (ROLE_ADMIN)...");
             UserEntity admin = new UserEntity(
                     "admin",
                     passwordEncoder.encode(defaultAdminPassword),
@@ -51,8 +50,12 @@ public class SecurityDataInitializer implements CommandLineRunner {
             );
             admin.setCreatedAt(Instant.now());
             userRepository.save(admin);
+            log.info("Universal demo admin account successfully initialized with BCrypt password hash: 'admin' (ROLE_ADMIN).");
+        }
 
-            // Seed default investigator
+        // Idempotent initialization of default investigator account (investigator / InvestigatorPass123!)
+        if (!userRepository.existsByUsername("investigator")) {
+            log.info("Default investigator account not found in database. Initializing 'investigator' (ROLE_INVESTIGATOR)...");
             UserEntity investigator = new UserEntity(
                     "investigator",
                     passwordEncoder.encode(defaultInvestigatorPassword),
@@ -61,8 +64,7 @@ public class SecurityDataInitializer implements CommandLineRunner {
             );
             investigator.setCreatedAt(Instant.now());
             userRepository.save(investigator);
-
-            log.info("Default accounts created with BCrypt password hashes: 'admin' (ROLE_ADMIN) and 'investigator' (ROLE_INVESTIGATOR).");
+            log.info("Default investigator account successfully initialized with BCrypt password hash: 'investigator' (ROLE_INVESTIGATOR).");
         }
     }
 }

@@ -34,6 +34,13 @@ public class AdminController implements MainLayoutController.Refreshable {
     @FXML private TextField searchField;
     @FXML private ComboBox<String> roleFilterComboBox;
 
+    @FXML private HBox cardUsers;
+    @FXML private HBox cardData;
+    @FXML private HBox cardSettings;
+    @FXML private HBox cardTemplates;
+    @FXML private HBox cardLogs;
+    @FXML private HBox cardSecurity;
+
     @FXML private TableView<UserDto> usersTable;
     @FXML private TableColumn<UserDto, String> colUsername;
     @FXML private TableColumn<UserDto, String> colRole;

@@ -15,7 +15,19 @@ public class AppConfig {
 
     private static final AppConfig INSTANCE = new AppConfig();
 
-    private final StringProperty backendBaseUrl = new SimpleStringProperty("http://localhost:8080");
+    private static String resolveDefaultBackendUrl() {
+        String prop = System.getProperty("cybertrace.backend.url");
+        if (prop != null && !prop.isBlank()) {
+            return prop.trim();
+        }
+        String env = System.getenv("CYBERTRACE_BACKEND_URL");
+        if (env != null && !env.isBlank()) {
+            return env.trim();
+        }
+        return "http://localhost:8080";
+    }
+
+    private final StringProperty backendBaseUrl = new SimpleStringProperty(resolveDefaultBackendUrl());
     private final BooleanProperty mockModeEnabled = new SimpleBooleanProperty(false);
     private final ObjectProperty<CaseModel> activeCase = new SimpleObjectProperty<>(null);
     private final BooleanProperty backendConnected = new SimpleBooleanProperty(false);
