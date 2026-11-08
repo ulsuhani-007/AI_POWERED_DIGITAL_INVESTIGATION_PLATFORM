@@ -20,6 +20,25 @@ Write-Host "Project Directory: $ProjectRoot" -ForegroundColor Gray
 # 1. Check Java Runtime Environment (Supports Java 21, 22, 23, 24, 25, and future >= 21)
 Write-Host "`n[1/5] Checking Java Runtime..." -ForegroundColor Yellow
 
+# Helper to test TCP port availability silently and rapidly without Test-NetConnection overhead
+function Test-PortListening([string]$HostName = "127.0.0.1", [int]$Port = 5432, [int]$TimeoutMs = 1000) {
+    try {
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $ar = $tcp.BeginConnect($HostName, $Port, $null, $null)
+        $success = $ar.AsyncWaitHandle.WaitOne($TimeoutMs, $false)
+        if ($success) {
+            $tcp.EndConnect($ar)
+            $tcp.Close()
+            return $true
+        } else {
+            $tcp.Close()
+            return $false
+        }
+    } catch {
+        return $false
+    }
+}
+
 $javaExe = $null
 
 # Check JAVA_HOME first if defined
@@ -93,34 +112,115 @@ Write-Host "  Binary: $javaExe" -ForegroundColor Gray
 
 # 2. Check PostgreSQL Service on Port 5432
 Write-Host "`n[2/5] Checking PostgreSQL Database on Port 5432..." -ForegroundColor Yellow
-$pgTest = Test-NetConnection -ComputerName 127.0.0.1 -Port 5432 -WarningAction SilentlyContinue
-if (-not $pgTest.TcpTestSucceeded) {
-    Write-Warning "PostgreSQL is NOT listening on localhost:5432."
-    Write-Host "Prerequisite Reminder:" -ForegroundColor Yellow
-    Write-Host "  1. Ensure PostgreSQL 16 is installed and running on port 5432." -ForegroundColor Gray
-    Write-Host "  2. Ensure the database 'cybertrace_db' exists with user 'postgres'." -ForegroundColor Gray
-    Write-Host "     (e.g., createdb -U postgres cybertrace_db)" -ForegroundColor Gray
-    Write-Host "  3. You may set DB_URL, DB_USERNAME, DB_PASSWORD environment variables if needed." -ForegroundColor Gray
-    $cont = Read-Host "Proceed anyway? (y/N)"
-    if ($cont -ne "y" -and $cont -ne "Y") {
-        exit 1
+
+$pgListening = Test-PortListening -HostName "127.0.0.1" -Port 5432 -TimeoutMs 1000
+
+if (-not $pgListening) {
+    Write-Host "  PostgreSQL is not listening on port 5432. Attempting auto-detection & auto-start..." -ForegroundColor Yellow
+    
+    # 2a. Attempt starting Windows Service if installed
+    $pgSvc = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue | Where-Object { $_.Status -ne "Running" } | Select-Object -First 1
+    if ($pgSvc) {
+        Write-Host "  Found Windows Service '$($pgSvc.Name)'. Starting service..." -ForegroundColor Gray
+        Start-Service -Name $pgSvc.Name -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
     }
+    
+    # 2b. Attempt starting standalone / portable binary if service was not active
+    if (-not (Test-PortListening -HostName "127.0.0.1" -Port 5432 -TimeoutMs 500)) {
+        $userPgBin = Join-Path $env:USERPROFILE "pgsql\bin\postgres.exe"
+        $userPgData = Join-Path $env:USERPROFILE "pgsql\data"
+        
+        $candidateExe = $null
+        $candidateData = $null
+        
+        if (Test-Path $userPgBin -ErrorAction SilentlyContinue) {
+            $candidateExe = $userPgBin
+            $candidateData = $userPgData
+        } else {
+            $searchPaths = @(
+                "C:\Program Files\PostgreSQL\17\bin\postgres.exe",
+                "C:\Program Files\PostgreSQL\16\bin\postgres.exe",
+                "C:\Program Files\PostgreSQL\15\bin\postgres.exe",
+                "C:\Program Files\PostgreSQL\14\bin\postgres.exe"
+            )
+            foreach ($p in $searchPaths) {
+                if (Test-Path $p -ErrorAction SilentlyContinue) {
+                    $candidateExe = $p
+                    $parent = Split-Path (Split-Path $p -Parent) -Parent
+                    $candidateData = Join-Path $parent "data"
+                    break
+                }
+            }
+        }
+        
+        if (-not $candidateExe) {
+            $cmd = Get-Command postgres -ErrorAction SilentlyContinue
+            if ($cmd) {
+                $candidateExe = $cmd.Source
+                $candidateData = Join-Path (Split-Path (Split-Path $candidateExe -Parent) -Parent) "data"
+            }
+        }
+        
+        if ($candidateExe -and (Test-Path $candidateExe -ErrorAction SilentlyContinue)) {
+            Write-Host "  Found PostgreSQL executable: $candidateExe" -ForegroundColor Cyan
+            if ($candidateData -and (Test-Path $candidateData -ErrorAction SilentlyContinue)) {
+                Write-Host "  Data cluster: $candidateData" -ForegroundColor Gray
+                Start-Process -FilePath $candidateExe -ArgumentList "-D `"$candidateData`"" -WindowStyle Hidden
+            } else {
+                Start-Process -FilePath $candidateExe -WindowStyle Hidden
+            }
+            
+            # Poll up to 10 seconds for port 5432 to become available
+            Write-Host "  Waiting for PostgreSQL daemon to accept connections..." -ForegroundColor Gray
+            for ($s = 0; $s -lt 10; $s++) {
+                Start-Sleep -Seconds 1
+                if (Test-PortListening -HostName "127.0.0.1" -Port 5432 -TimeoutMs 500) {
+                    $pgListening = $true
+                    break
+                }
+            }
+        }
+    } else {
+        $pgListening = $true
+    }
+    
+    $pgListening = Test-PortListening -HostName "127.0.0.1" -Port 5432 -TimeoutMs 1000
+}
+
+if ($pgListening) {
+    # Brief pause to ensure PostgreSQL transitions from socket-bind to accepting SQL connections
+    Start-Sleep -Seconds 2
+    Write-Host "  PostgreSQL is ACTIVE and accepting connections on port 5432." -ForegroundColor Green
 } else {
-    Write-Host "  PostgreSQL is ACTIVE and listening on port 5432." -ForegroundColor Green
+    Write-Host "CRITICAL: PostgreSQL is NOT listening on localhost:5432." -ForegroundColor Red
+    Write-Host "The CyberTrace platform requires PostgreSQL to store cases, evidence, and audit logs." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Please start PostgreSQL manually before running this launcher:" -ForegroundColor Cyan
+    Write-Host "  Option 1 (User / Portable):" -ForegroundColor White
+    Write-Host "    & `"$env:USERPROFILE\pgsql\bin\postgres.exe`" -D `"$env:USERPROFILE\pgsql\data`"" -ForegroundColor Gray
+    Write-Host "  Option 2 (Windows Service):" -ForegroundColor White
+    Write-Host "    Start-Service postgresql*" -ForegroundColor Gray
+    Write-Host "  Option 3 (Verify Database Exists):" -ForegroundColor White
+    Write-Host "    createdb -U postgres cybertrace_db" -ForegroundColor Gray
+    Write-Host ""
+    exit 1
 }
 
 # Helper to check and clear port
 function Clear-PortIfProjectProcess([int]$Port, [string]$ServiceName) {
-    $conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
-    if ($conn) {
-        $procId = $conn.OwningProcess
-        $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
-        if ($proc -and $proc.ProcessName -eq "java") {
-            Write-Host "  Port $Port occupied by existing Java process (PID $procId). Stopping cleanly..." -ForegroundColor Yellow
-            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 2
-        } else {
-            Write-Warning "  Port $Port is occupied by PID $procId ($($proc.ProcessName)). Service $ServiceName may conflict."
+    $conns = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+    if ($conns) {
+        $procIds = $conns | Select-Object -ExpandProperty OwningProcess -Unique
+        foreach ($procId in $procIds) {
+            $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+            if ($proc -and $proc.ProcessName -eq "java") {
+                Write-Host "  Port $Port occupied by existing Java process (PID $procId). Stopping cleanly..." -ForegroundColor Yellow
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 1
+            } elseif ($proc) {
+                Write-Warning "  Port $Port is occupied by PID $procId ($($proc.ProcessName)). Service $ServiceName may conflict."
+            }
         }
     }
 }
@@ -145,17 +245,33 @@ if ($BuildJars -or (-not (Test-Path $m1Jar)) -or (-not (Test-Path $m2Jar)) -or (
     & $mvnw -f (Join-Path $ProjectRoot "cybertrace-m3\pom.xml") package -DskipTests
 }
 
+# Prepare logs directory under target/ to avoid git pollution
+$logDir = Join-Path $ProjectRoot "target\logs"
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+$m1Log = Join-Path $logDir "m1-backend.log"
+$m1Err = Join-Path $logDir "m1-backend-err.log"
+$m2Log = Join-Path $logDir "m2-timeline.log"
+$m2Err = Join-Path $logDir "m2-timeline-err.log"
+$m3Log = Join-Path $logDir "m3-analysis.log"
+$m3Err = Join-Path $logDir "m3-analysis-err.log"
+
 # 4. Start Backend Microservices in Required Order: PostgreSQL -> M1 -> M2 -> M3 -> JavaFX
 Write-Host "`n[4/5] Starting Backend Microservices (Order: M1 -> M2 -> M3)..." -ForegroundColor Yellow
 
 # Start M1 (Backend on 8080)
 Write-Host "  [4.1] Launching M1 Backend on port 8080..." -ForegroundColor Gray
-$m1Proc = Start-Process -FilePath $javaExe -ArgumentList "-jar `"$m1Jar`" --spring.profiles.active=dev" -WorkingDirectory $ProjectRoot -PassThru -WindowStyle Hidden
+$m1Proc = Start-Process -FilePath $javaExe -ArgumentList "-jar `"$m1Jar`" --spring.profiles.active=dev" `
+    -WorkingDirectory $ProjectRoot `
+    -RedirectStandardOutput $m1Log `
+    -RedirectStandardError $m1Err `
+    -PassThru -WindowStyle Hidden
 
 # Wait for M1 readiness
 Write-Host "  Waiting for M1 Backend to initialize..." -ForegroundColor Gray
 $m1Ready = $false
-for ($i = 0; $i -lt 30; $i++) {
+for ($i = 0; $i -lt 35; $i++) {
     Start-Sleep -Seconds 1
     try {
         $res = Invoke-RestMethod -Uri "http://localhost:8080/api/health" -Method Get -TimeoutSec 2 -ErrorAction SilentlyContinue
@@ -169,22 +285,57 @@ for ($i = 0; $i -lt 30; $i++) {
 if ($m1Ready) {
     Write-Host "  M1 Backend: ONLINE (Port 8080)" -ForegroundColor Green
 } else {
-    Write-Warning "  M1 Backend did not respond within 30s. Continuing startup..."
+    Write-Host "  WARNING: M1 Backend did not report UP within 35s." -ForegroundColor Yellow
+    if (Test-Path $m1Err) {
+        Write-Host "  Recent error log from M1 Backend ($m1Err):" -ForegroundColor Gray
+        Get-Content $m1Err -Tail 15 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+    }
 }
 
 # Start M2 (Timeline Engine on 8081)
 Write-Host "  [4.2] Launching M2 Timeline Engine on port 8081..." -ForegroundColor Gray
-$m2Proc = Start-Process -FilePath $javaExe -ArgumentList "-jar `"$m2Jar`"" -WorkingDirectory $ProjectRoot -PassThru -WindowStyle Hidden
+$m2Proc = Start-Process -FilePath $javaExe -ArgumentList "-jar `"$m2Jar`"" `
+    -WorkingDirectory $ProjectRoot `
+    -RedirectStandardOutput $m2Log `
+    -RedirectStandardError $m2Err `
+    -PassThru -WindowStyle Hidden
 
 # Start M3 (Analysis Engine on 8082)
 Write-Host "  [4.3] Launching M3 Analysis Engine on port 8082..." -ForegroundColor Gray
-$m3Proc = Start-Process -FilePath $javaExe -ArgumentList "-jar `"$m3Jar`"" -WorkingDirectory $ProjectRoot -PassThru -WindowStyle Hidden
+$m3Proc = Start-Process -FilePath $javaExe -ArgumentList "-jar `"$m3Jar`"" `
+    -WorkingDirectory $ProjectRoot `
+    -RedirectStandardOutput $m3Log `
+    -RedirectStandardError $m3Err `
+    -PassThru -WindowStyle Hidden
 
 # Wait for M2 & M3 readiness
 Write-Host "  Waiting for M2 and M3 to initialize..." -ForegroundColor Gray
-Start-Sleep -Seconds 4
-Write-Host "  M2 Timeline Engine: ONLINE (Port 8081)" -ForegroundColor Green
-Write-Host "  M3 Analysis Engine: ONLINE (Port 8082)" -ForegroundColor Green
+$m2Ready = $false
+$m3Ready = $false
+for ($j = 0; $j -lt 15; $j++) {
+    Start-Sleep -Seconds 1
+    if (-not $m2Ready -and (Test-PortListening -HostName "127.0.0.1" -Port 8081 -TimeoutMs 500)) {
+        $m2Ready = $true
+    }
+    if (-not $m3Ready -and (Test-PortListening -HostName "127.0.0.1" -Port 8082 -TimeoutMs 500)) {
+        $m3Ready = $true
+    }
+    if ($m2Ready -and $m3Ready) {
+        break
+    }
+}
+
+if ($m2Ready) {
+    Write-Host "  M2 Timeline Engine: ONLINE (Port 8081)" -ForegroundColor Green
+} else {
+    Write-Host "  M2 Timeline Engine: Initializing (Port 8081)" -ForegroundColor Yellow
+}
+
+if ($m3Ready) {
+    Write-Host "  M3 Analysis Engine: ONLINE (Port 8082)" -ForegroundColor Green
+} else {
+    Write-Host "  M3 Analysis Engine: Initializing (Port 8082)" -ForegroundColor Yellow
+}
 
 Write-Host "`nUniversal Demo Admin Credentials:" -ForegroundColor Cyan
 Write-Host "  Username: admin" -ForegroundColor White

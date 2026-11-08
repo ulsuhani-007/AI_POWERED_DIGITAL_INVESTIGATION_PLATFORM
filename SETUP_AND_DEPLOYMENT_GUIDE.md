@@ -80,11 +80,11 @@ From the project root:
 ```
 
 The script automatically:
-1. Verifies the Java runtime.
-2. Checks that PostgreSQL is active on port `5432`.
-3. Diagnoses and clears any stale project processes on ports `8080`, `8081`, and `8082`.
-4. Starts M3 (port `8082`), M2 (port `8081`), and M1 (port `8080`).
-5. Waits for health checks to verify all services are online.
+1. Verifies the Java runtime (supports Java 21, 22, 23, 24, 25, and later).
+2. Checks PostgreSQL on port `5432` and automatically starts the database if installed locally (`%USERPROFILE%\pgsql` or standard Windows service).
+3. Diagnoses and safely terminates stale project processes on ports `8080`, `8081`, and `8082`.
+4. Starts M1 (port `8080`), M2 (port `8081`), and M3 (port `8082`) in background with logs in `target\logs\`.
+5. Waits for health checks to verify all backend microservices are online.
 6. Launches the JavaFX Investigation Workstation.
 
 ---
