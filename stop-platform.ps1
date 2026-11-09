@@ -11,15 +11,18 @@ $ports = @(8080, 8081, 8082)
 $found = 0
 
 foreach ($port in $ports) {
-    $conns = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    $conns = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
     if ($conns) {
         $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique
         foreach ($pidToKill in $pids) {
-            $proc = Get-Process -Id $pidToKill -ErrorAction SilentlyContinue
-            if ($proc) {
-                Write-Host "  [OK] Terminating $($proc.ProcessName) on port $port (PID: $pidToKill)..." -ForegroundColor Yellow
-                Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
-                $found++
+            if ($pidToKill -gt 4) {
+                $proc = Get-Process -Id $pidToKill -ErrorAction SilentlyContinue
+                if ($proc) {
+                    Write-Host "  [OK] Terminating $($proc.ProcessName) on port $port (PID: $pidToKill)..." -ForegroundColor Yellow
+                    Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+                    try { $proc.WaitForExit(2000) } catch {}
+                    $found++
+                }
             }
         }
     }
