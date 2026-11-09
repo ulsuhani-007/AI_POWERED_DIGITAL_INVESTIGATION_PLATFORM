@@ -116,7 +116,7 @@ public class ApiClient {
             }
         } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
             AppConfig.getInstance().setBackendConnected(false);
-            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running at " + getBaseUrl() + ".", e);
         }
     }
 
@@ -145,7 +145,7 @@ public class ApiClient {
             }
         } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
             AppConfig.getInstance().setBackendConnected(false);
-            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running at " + getBaseUrl() + ".", e);
         }
     }
 
@@ -177,7 +177,7 @@ public class ApiClient {
             }
         } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
             AppConfig.getInstance().setBackendConnected(false);
-            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running at " + getBaseUrl() + ".", e);
         }
     }
 
@@ -209,7 +209,7 @@ public class ApiClient {
             }
         } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
             AppConfig.getInstance().setBackendConnected(false);
-            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running at " + getBaseUrl() + ".", e);
         }
     }
 
@@ -231,7 +231,7 @@ public class ApiClient {
             return ok;
         } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
             AppConfig.getInstance().setBackendConnected(false);
-            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running at " + getBaseUrl() + ".", e);
         }
     }
 
@@ -295,7 +295,7 @@ public class ApiClient {
             }
         } catch (java.net.ConnectException | java.net.http.HttpConnectTimeoutException e) {
             AppConfig.getInstance().setBackendConnected(false);
-            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running on port 8080.", e);
+            throw new IOException("Unable to connect to backend at " + getBaseUrl() + ". Please verify cybertrace-m1 is running at " + getBaseUrl() + ".", e);
         }
     }
 

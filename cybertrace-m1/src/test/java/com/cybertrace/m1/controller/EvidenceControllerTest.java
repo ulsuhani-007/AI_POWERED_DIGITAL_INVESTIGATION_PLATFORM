@@ -60,8 +60,8 @@ class EvidenceControllerTest {
                 .andExpect(jsonPath("$.fileName").value("network_events.csv"))
                 .andExpect(jsonPath("$.fileType").value("NETWORK_CAPTURE"))
                 .andExpect(jsonPath("$.hashSha256").isNotEmpty())
-                // In standalone tests when M2 is offline, evidence is recorded and status gracefully set to FAILED
-                .andExpect(jsonPath("$.status").value("FAILED"));
+                // In standalone tests when M2 is offline, evidence is recorded and status is FAILED; if M2 is online it is PROCESSED
+                .andExpect(jsonPath("$.status", org.hamcrest.Matchers.anyOf(org.hamcrest.Matchers.is("FAILED"), org.hamcrest.Matchers.is("PROCESSED"))));
 
         // Verify retrieval via GET /api/cases/{caseId}/evidence
         mockMvc.perform(get("/api/cases/" + aCase.getId() + "/evidence"))

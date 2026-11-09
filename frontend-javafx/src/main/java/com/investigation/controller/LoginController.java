@@ -1,6 +1,7 @@
 package com.investigation.controller;
 
 import com.investigation.api.ApiClient;
+import com.investigation.config.AppConfig;
 import com.investigation.model.UserSession;
 import com.investigation.service.ServiceFactory;
 import com.investigation.service.SessionService;
@@ -77,7 +78,7 @@ public class LoginController {
             } else if (msg.contains("disabled") || msg.contains("403")) {
                 showError("Access Denied: This investigator account is currently disabled.");
             } else if (msg.contains("Unable to connect") || msg.contains("Connection refused")) {
-                showError("Backend Offline: Cannot connect to http://localhost:8080. Verify cybertrace-m1 is running.");
+                showError("Backend Offline: Cannot connect to " + AppConfig.getInstance().getBackendBaseUrl() + ". Verify cybertrace-m1 is running.");
             } else {
                 showError("Authentication Error: " + msg);
             }

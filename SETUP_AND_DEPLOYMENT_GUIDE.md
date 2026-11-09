@@ -1,135 +1,143 @@
 # AI-Powered Digital Investigation Platform - Setup & Deployment Guide
 
-This guide describes how any team member can clone, configure, and launch the **AI-Powered Digital Investigation Platform** on a fresh Windows machine.
+This guide describes how any team member can clone, configure, and launch the **AI-Powered Digital Investigation Platform** on a fresh Windows machine with zero manual code modifications.
 
 ---
 
-## 1. System Prerequisites
+## 1. Quick Start for Fresh Machines (8 Simple Steps)
 
-The platform is 100% Java-based and requires only standard, vendor-neutral prerequisites:
+A new team member can get the entire platform up and running in just a few minutes:
 
-1. **Java Development Kit (JDK) 21 or later**
-   - Verified runtime: Java 21 / Java 25 (Eclipse Adoptium Temurin or Oracle JDK).
-   - Verify in terminal:
+1. **Install Java 21 or Later**:
+   - Download and install JDK 21+ (e.g., [Eclipse Adoptium Temurin 21+](https://adoptium.net/) or Oracle JDK).
+   - Verify in PowerShell:
      ```powershell
      java -version
      ```
-2. **PostgreSQL 16 Database Server**
-   - Running locally on port `5432`.
-   - Default superuser: `postgres`.
-   - Database name: `cybertrace_db`.
-   - Setup command:
+2. **Install PostgreSQL 16+**:
+   - Download and install PostgreSQL 16 or later ([PostgreSQL Official Downloads](https://www.postgresql.org/download/windows/)).
+   - Ensure the PostgreSQL Windows Service is running:
+     ```powershell
+     Start-Service postgresql*
+     ```
+3. **Create the Database `cybertrace_db`**:
+   - Run the standard command in PowerShell or cmd:
      ```powershell
      createdb -U postgres cybertrace_db
      ```
-   - *Note*: If your PostgreSQL uses custom credentials, you can configure them via environment variables:
-     - `DB_URL` (default: `jdbc:postgresql://localhost:5432/cybertrace_db`)
-     - `DB_USERNAME` (default: `postgres`)
-     - `DB_PASSWORD` (default: `postgres`)
-
-No Node.js, npm, Python, Electron, or external web runtimes are required.
+   - *Default credentials assumed by the application*:
+     - User: `postgres`
+     - Password: `postgres`
+     - Port: `5432`
+     - Database: `cybertrace_db`
+   - *Custom Credentials*: If your PostgreSQL installation uses a custom password or username, set the environment variables before running:
+     ```powershell
+     $env:DB_USERNAME = "your_postgres_user"
+     $env:DB_PASSWORD = "your_postgres_password"
+     ```
+4. **Clone the Repository**:
+   ```powershell
+   git clone <repository-url>
+   ```
+5. **Open Project Root**:
+   ```powershell
+   cd AI_POWERED_DIGITAL_INVESTIGATION_PLATFORM
+   ```
+6. **Run the Portable Startup Script**:
+   - Via Command Prompt or File Explorer:
+     ```cmd
+     start-platform.bat
+     ```
+   - Or via PowerShell:
+     ```powershell
+     .\start-platform.ps1
+     ```
+7. **Log In Using the Universal Demo / Admin Credentials**:
+   - **Username**: `admin`
+   - **Password**: `AdminPass123!`
+8. **Use the JavaFX Investigation Workstation**:
+   - The desktop workstation automatically launches and connects to the backend services.
 
 ---
 
-## 2. Platform Architecture & Port Allocation
+## 2. Platform Architecture & Service Allocation
 
-The platform comprises three microservices, a relational database, and a JavaFX desktop workstation:
+The platform is 100% Java & JavaFX based. It requires **no** Node.js, npm, Vite, Python, Electron, or external web runtimes:
 
-| Component | Role | Default Port | Technology |
+```
+JavaFX Desktop Forensic Workstation (Java 21 + JavaFX 21)
+       ↓
+M1 Backend Service (Spring Boot 3.3.4 :8080)
+       ↓                     ↓
+M2 Timeline Engine (:8081)   M3 AI Analysis Engine (:8082)
+       ↓
+PostgreSQL Database (:5432 / cybertrace_db)
+```
+
+| Component | Port | Technology | Purpose |
 |---|---|---|---|
-| **PostgreSQL** | Forensic data persistence & Flyway schema | `5432` | PostgreSQL 16 |
-| **M1 Backend** | Case management, custody tracking & security | `8080` | Spring Boot 3.3.4 (Java 21) |
-| **M2 Timeline Engine** | Evidence parsing, event normalization & merging | `8081` | Spring Boot 3.3.4 (Java 21) |
-| **M3 Analysis Engine** | AI anomaly detection, statistical baselines & summaries | `8082` | Spring Boot 3.3.4 (Java 21) |
-| **JavaFX Frontend** | Desktop forensic workstation UI | N/A | JavaFX 21 + Jackson API |
+| **PostgreSQL** | `5432` | PostgreSQL 16+ | Forensic case persistence, evidence custody, audit logs & Flyway migrations |
+| **M1 Backend** | `8080` | Spring Boot 3.3.4 | Core REST API, JWT auth, RBAC, evidence storage, historical cases |
+| **M2 Timeline Engine** | `8081` | Spring Boot 3.3.4 | CSV evidence parser, timestamp normalizer, multi-source timeline builder |
+| **M3 Analysis Engine** | `8082` | Spring Boot 3.3.4 | Statistical anomaly detection, brute force detection, AI forensic summary |
+| **JavaFX Frontend** | Desktop | JavaFX 21 | High-performance forensic analyst workstation UI |
 
 ---
 
 ## 3. Universal Demo Accounts
 
-On any fresh or existing machine, the application automatically and idempotently initializes standard demo credentials with BCrypt password hashes in PostgreSQL:
+On startup, Flyway and the database seeders initialize the standard demonstration credentials:
 
-### Universal Administrator
-- **Username**: `admin`
-- **Password**: `AdminPass123!`
-- **Role**: `ROLE_ADMIN`
-- **Capabilities**: Full access to Case Management, Evidence Processing, AI Analysis, and the Administration Panel (User Management, Audit Logs, Security Policies).
-
-### Universal Investigator
-- **Username**: `investigator`
-- **Password**: `InvestigatorPass123!`
-- **Role**: `ROLE_INVESTIGATOR`
-- **Capabilities**: Forensic case intake, evidence upload, timeline inspection, anomaly review, and forensic summary generation.
+| Role | Username | Password | Access Capabilities |
+|---|---|---|---|
+| **Administrator** | `admin` | `AdminPass123!` | Full access to Cases, Evidence, Timeline, AI Analysis, and Administration (User Management, Audit Logs) |
+| **Investigator** | `investigator` | `InvestigatorPass123!` | Full access to Cases, Evidence Upload, Normalized Timeline, Anomaly Inspection, and Case Reports |
 
 ---
 
-## 4. One-Click Portable Startup
+## 4. Startup & Teardown Utilities
 
-The repository provides two portable startup scripts that do **not** depend on any user-specific directories or usernames:
+### Portable Startup (`start-platform.bat` / `start-platform.ps1`)
+The startup script detects all dependencies dynamically without any hard-coded paths:
+1. `[1/5] Checking Java...`: Dynamically locates `java.exe` via `JAVA_HOME` or `PATH` and verifies version >= 21.
+2. `[2/5] Checking PostgreSQL...`: Checks localhost:5432; auto-detects Windows Service or standard installation directory if not listening.
+3. `[3/5] Starting M1...`: Reuses existing healthy M1 instance on port 8080 if already active; terminates stale processes safely; starts M1.
+4. `[4/5] Starting M2 and M3...`: Reuses existing instances on ports 8081 and 8082 if active; starts missing services.
+5. `[5/5] Starting JavaFX...`: Launches the JavaFX Investigation Workstation via the portable Maven Wrapper.
 
-### Method A: Windows Command Prompt / File Explorer
-Double-click or run from cmd:
+### Portable Teardown (`stop-platform.bat` / `stop-platform.ps1`)
+To cleanly terminate background microservices and free ports 8080, 8081, and 8082:
 ```cmd
-start-platform.bat
+stop-platform.bat
 ```
-
-### Method B: PowerShell
-From the project root:
+or in PowerShell:
 ```powershell
-.\start-platform.ps1
+.\stop-platform.ps1
 ```
-
-The script automatically:
-1. Verifies the Java runtime (supports Java 21, 22, 23, 24, 25, and later).
-2. Checks PostgreSQL on port `5432` and automatically starts the database if installed locally (`%USERPROFILE%\pgsql` or standard Windows service).
-3. Diagnoses and safely terminates stale project processes on ports `8080`, `8081`, and `8082`.
-4. Starts M1 (port `8080`), M2 (port `8081`), and M3 (port `8082`) in background with logs in `target\logs\`.
-5. Waits for health checks to verify all backend microservices are online.
-6. Launches the JavaFX Investigation Workstation.
 
 ---
 
-## 5. Manual Service Startup (Optional)
+## 5. Environment Variables & Overrides (Optional)
 
-If you prefer to start each service in separate terminal windows:
+All settings work out-of-the-box with default values. If needed, the following environment variables can be set:
 
-### Terminal 1: M3 Analysis Engine (Port 8082)
-```powershell
-.\cybertrace-m3\mvnw.cmd -f cybertrace-m3\pom.xml spring-boot:run
-```
-
-### Terminal 2: M2 Timeline Engine (Port 8081)
-```powershell
-.\cybertrace-m2\mvnw.cmd -f cybertrace-m2\pom.xml spring-boot:run
-```
-
-### Terminal 3: M1 Backend Service (Port 8080)
-```powershell
-.\cybertrace-m1\mvnw.cmd -f cybertrace-m1\pom.xml spring-boot:run
-```
-
-### Terminal 4: JavaFX Desktop Workstation
-```powershell
-.\cybertrace-m1\mvnw.cmd -f frontend-javafx\pom.xml javafx:run
-```
+| Variable | Default Value | Description |
+|---|---|---|
+| `DB_URL` | `jdbc:postgresql://localhost:5432/cybertrace_db` | PostgreSQL JDBC connection URL |
+| `DB_USERNAME` | `postgres` | PostgreSQL username |
+| `DB_PASSWORD` | `postgres` | PostgreSQL password |
+| `CYBERTRACE_BACKEND_URL` | `http://localhost:8080` | URL used by JavaFX frontend to communicate with M1 |
+| `CYBERTRACE_M2_URL` | `http://localhost:8081` | URL used by M1 to communicate with M2 Timeline Engine |
+| `CYBERTRACE_M3_URL` | `http://localhost:8082` | URL used by M1 to communicate with M3 Analysis Engine |
 
 ---
 
 ## 6. End-to-End Investigation Workflow
 
-1. **Investigator Login**:
-   - Open the application and log in using `admin / AdminPass123!`.
-2. **Case Intake**:
-   - Navigate to **Cases** and click **+ New Case**.
-   - Enter case number, title, priority, and lead investigator.
-3. **Evidence Ingestion**:
-   - Select the case, click **Upload Evidence**, and choose a forensic CSV file (e.g. login, network, file access, or browser activity).
-   - The platform calculates the SHA-256 integrity hash for chain-of-custody tracking.
-4. **M2 Normalization & Timeline Construction**:
-   - The M2 timeline engine normalizes timestamps and attributes into a unified schema (`normalized_events`).
-5. **M3 AI Anomaly Detection & Forensic Summary**:
-   - The M3 engine applies statistical anomaly detection, brute-force correlation, and off-hours heuristics.
-   - An evidence-grounded forensic report is produced with key findings and investigation summaries.
-6. **User Administration**:
-   - Admins can navigate to **Administration**, view existing users, and click **+ New User** to provision new accounts with custom security roles.
-
+1. **Login**: Authenticate with `admin` / `AdminPass123!`.
+2. **Cases**: View historical landmark demonstration cases or click **+ New Case**.
+3. **Upload Evidence**: Upload forensic CSV files (e.g. login activity, network traffic, file access logs).
+4. **Processing & Timeline**: Evidence is parsed by M2 and merged into a chronological multi-source timeline.
+5. **AI Anomaly Detection**: M3 evaluates events using statistical z-scores, brute force detection, and off-hours heuristics.
+6. **Forensic Summary**: Review evidence-grounded AI analysis findings and investigation statistics.
+7. **Administration**: Provision new analysts, manage roles, and review tamper-evident audit logs.
