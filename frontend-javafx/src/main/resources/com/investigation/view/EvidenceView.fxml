@@ -109,6 +109,7 @@
 
                 <HBox spacing="8.0">
                     <Button text="View Timeline Events →" onAction="#onJumpToTimelineForEvidence" styleClass="btn-primary" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="btnDeleteEvidence" text="Delete Evidence" onAction="#onDeleteEvidence" styleClass="btn-danger" style="-fx-font-size: 12px; -fx-padding: 6px 12px;"/>
                 </HBox>
             </VBox>
 

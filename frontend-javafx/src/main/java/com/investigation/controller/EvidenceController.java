@@ -57,6 +57,7 @@ public class EvidenceController implements MainLayoutController.Refreshable {
     @FXML private Label detailEvents;
     @FXML private Label detailHash;
     @FXML private Label detailDescription;
+    @FXML private Button btnDeleteEvidence;
 
     @FXML private StackPane overlayPane;
 
@@ -163,6 +164,26 @@ public class EvidenceController implements MainLayoutController.Refreshable {
             showEvidenceDetails(newVal);
         });
 
+        evidenceTable.setRowFactory(tv -> {
+            TableRow<EvidenceModel> row = new TableRow<>();
+            ContextMenu contextMenu = new ContextMenu();
+            MenuItem deleteItem = new MenuItem("Delete Evidence File");
+            deleteItem.setStyle("-fx-text-fill: #DC2626; -fx-font-weight: bold;");
+            deleteItem.setOnAction(e -> {
+                if (!row.isEmpty()) promptDeleteEvidence(row.getItem());
+            });
+            contextMenu.getItems().add(deleteItem);
+
+            row.setOnContextMenuRequested(e -> {
+                if (!row.isEmpty()) {
+                    contextMenu.show(row, e.getScreenX(), e.getScreenY());
+                } else {
+                    contextMenu.hide();
+                }
+            });
+            return row;
+        });
+
         filteredEvidence = new FilteredList<>(masterEvidence, p -> true);
         evidenceTable.setItems(filteredEvidence);
     }
@@ -179,9 +200,11 @@ public class EvidenceController implements MainLayoutController.Refreshable {
             detailEvents.setText("--");
             detailHash.setText("--");
             detailDescription.setText("Select an evidence artifact to inspect chain of custody metadata.");
+            if (btnDeleteEvidence != null) btnDeleteEvidence.setDisable(true);
             return;
         }
 
+        if (btnDeleteEvidence != null) btnDeleteEvidence.setDisable(false);
         detailFileName.setText(em.getFileName());
         if (em.getStatus() == EvidenceStatus.FAILED) {
             detailStatus.setText("Processing Failed");
@@ -366,5 +389,51 @@ public class EvidenceController implements MainLayoutController.Refreshable {
 
             new Thread(uploadTask).start();
         }
+    }
+
+    @FXML
+    private void onDeleteEvidence() {
+        if (selectedEvidence != null) {
+            promptDeleteEvidence(selectedEvidence);
+        } else {
+            UiUtils.showWarning("No Evidence Selected", "Please select an evidence file to delete.");
+        }
+    }
+
+    private void promptDeleteEvidence(EvidenceModel em) {
+        if (em == null) return;
+        CaseModel activeCase = AppConfig.getInstance().getActiveCase();
+        if (activeCase == null) return;
+
+        boolean confirm = UiUtils.showConfirmation(
+                "Delete Evidence File",
+                "Delete " + em.getFileName() + "?",
+                "Are you sure you want to permanently delete evidence file '" + em.getFileName() + "'?\n" +
+                "All normalized events generated from this file will also be removed from the timeline."
+        );
+        if (!confirm) return;
+
+        showLoading("Deleting evidence file...");
+        Task<Boolean> task = new Task<>() {
+            @Override
+            protected Boolean call() throws Exception {
+                return ServiceFactory.getInstance().getEvidenceService().deleteEvidence(activeCase.getId(), em.getId());
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            hideLoading();
+            UiUtils.showInfo("Evidence Deleted", "Evidence file '" + em.getFileName() + "' has been permanently deleted.");
+            refreshData();
+        });
+
+        task.setOnFailed(e -> {
+            hideLoading();
+            UiUtils.showError("Failed to Delete Evidence", task.getException() != null ? task.getException().getMessage() : "Unknown error");
+        });
+
+        Thread th = new Thread(task);
+        th.setDaemon(true);
+        th.start();
     }
 }

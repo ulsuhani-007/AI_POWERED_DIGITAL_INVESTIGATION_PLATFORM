@@ -35,5 +35,12 @@ public class EvidenceController {
         EvidenceDTO uploaded = evidenceService.uploadEvidence(caseId, file, description);
         return ResponseEntity.status(HttpStatus.CREATED).body(uploaded);
     }
+
+    @DeleteMapping("/{evidenceId}")
+    public ResponseEntity<Void> deleteEvidence(@PathVariable("caseId") String caseId,
+                                               @PathVariable("evidenceId") String evidenceId) {
+        evidenceService.deleteEvidence(caseId, evidenceId);
+        return ResponseEntity.noContent().build();
+    }
 }
 

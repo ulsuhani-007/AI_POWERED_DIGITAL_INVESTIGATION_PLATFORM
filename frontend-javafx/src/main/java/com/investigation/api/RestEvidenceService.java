@@ -49,6 +49,11 @@ public class RestEvidenceService implements EvidenceService {
         return mapToModel(dto);
     }
 
+    @Override
+    public boolean deleteEvidence(String caseId, String evidenceId) throws Exception {
+        return apiClient.delete("/api/cases/" + caseId + "/evidence/" + evidenceId);
+    }
+
     private EvidenceModel mapToModel(EvidenceDto dto) {
         if (dto == null) return null;
         return new EvidenceModel(

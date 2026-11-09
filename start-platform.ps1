@@ -253,18 +253,25 @@ if ($pgListening) {
 
 # Helper to check and clear port
 function Clear-PortIfProjectProcess([int]$Port, [string]$ServiceName) {
-    $conns = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+    $conns = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
     if ($conns) {
         $procIds = $conns | Select-Object -ExpandProperty OwningProcess -Unique
         foreach ($procId in $procIds) {
-            $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
-            if ($proc -and $proc.ProcessName -eq "java") {
-                Write-Host "  Port $Port occupied by existing Java process (PID $procId). Stopping cleanly..." -ForegroundColor Yellow
-                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-                Start-Sleep -Seconds 1
-            } elseif ($proc) {
-                Write-Warning "  Port $Port is occupied by PID $procId ($($proc.ProcessName)). Service $ServiceName may conflict."
+            if ($procId -gt 4) {
+                $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+                if ($proc -and $proc.ProcessName -match 'java|javaw') {
+                    Write-Host "  Port $Port occupied by existing Java process (PID $procId). Stopping cleanly..." -ForegroundColor Yellow
+                    Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+                    try { $proc.WaitForExit(3000) } catch {}
+                } elseif ($proc) {
+                    Write-Warning "  Port $Port is occupied by PID $procId ($($proc.ProcessName)). Service $ServiceName may conflict."
+                }
             }
+        }
+        for ($wait = 0; $wait -lt 8; $wait++) {
+            $remaining = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+            if (-not $remaining) { break }
+            Start-Sleep -Milliseconds 500
         }
     }
 }
@@ -277,7 +284,11 @@ Clear-PortIfProjectProcess 8082 "M3 Analysis"
 Write-Host "  Ports verified and ready." -ForegroundColor Green
 
 # Optional: Build jars if requested or missing
-$m1Jar = Join-Path $ProjectRoot "cybertrace-m1\target\cybertrace-m1-backend-1.0.0-SNAPSHOT.jar"
+$m1Jar = Join-Path $ProjectRoot "cybertrace-m1\target\cybertrace-m1-backend-app.jar"
+if (-not (Test-Path $m1Jar)) {
+    $m1LegacyJar = Join-Path $ProjectRoot "cybertrace-m1\target\cybertrace-m1-backend-1.0.0-SNAPSHOT.jar"
+    if (Test-Path $m1LegacyJar) { $m1Jar = $m1LegacyJar }
+}
 $m2Jar = Join-Path $ProjectRoot "cybertrace-m2\target\cybertrace-m2-timeline-engine-1.0.0-SNAPSHOT.jar"
 $m3Jar = Join-Path $ProjectRoot "cybertrace-m3\target\cybertrace-m3-analysis-engine-1.0.0-SNAPSHOT.jar"
 $mvnw = Join-Path $ProjectRoot "cybertrace-m1\mvnw.cmd"
@@ -285,6 +296,9 @@ $mvnw = Join-Path $ProjectRoot "cybertrace-m1\mvnw.cmd"
 if ($BuildJars -or (-not (Test-Path $m1Jar)) -or (-not (Test-Path $m2Jar)) -or (-not (Test-Path $m3Jar))) {
     Write-Host "`nBuilding application modules with Maven Wrapper..." -ForegroundColor Yellow
     & $mvnw -f (Join-Path $ProjectRoot "cybertrace-m1\pom.xml") package -DskipTests
+    if (Test-Path (Join-Path $ProjectRoot "cybertrace-m1\target\cybertrace-m1-backend-app.jar")) {
+        $m1Jar = Join-Path $ProjectRoot "cybertrace-m1\target\cybertrace-m1-backend-app.jar"
+    }
     & $mvnw -f (Join-Path $ProjectRoot "cybertrace-m2\pom.xml") package -DskipTests
     & $mvnw -f (Join-Path $ProjectRoot "cybertrace-m3\pom.xml") package -DskipTests
 }

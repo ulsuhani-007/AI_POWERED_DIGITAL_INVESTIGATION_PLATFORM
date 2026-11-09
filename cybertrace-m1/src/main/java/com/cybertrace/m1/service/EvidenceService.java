@@ -273,6 +273,15 @@ public class EvidenceService {
         return "CSV Evidence";
     }
 
+    public void deleteEvidence(String caseId, String evidenceId) {
+        EvidenceEntity entity = evidenceRepository.findByIdAndCaseEntity_Id(evidenceId, caseId)
+                .orElseThrow(() -> new com.cybertrace.m1.exception.ResourceNotFoundException("Evidence", evidenceId));
+
+        eventService.deleteEventsByEvidenceId(evidenceId);
+        evidenceRepository.delete(entity);
+        log.info("Deleted evidence {} from case {}", evidenceId, caseId);
+    }
+
     private EvidenceDTO mapToDto(EvidenceEntity entity) {
         return new EvidenceDTO(
                 entity.getId(),

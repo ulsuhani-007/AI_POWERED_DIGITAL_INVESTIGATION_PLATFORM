@@ -117,6 +117,13 @@ public class EventService {
         return result;
     }
 
+    public void deleteEventsByEvidenceId(String evidenceId) {
+        if (evidenceId != null && !evidenceId.isBlank()) {
+            normalizedEventRepository.deleteBySourceEvidenceId(evidenceId);
+            log.info("Deleted normalized events associated with evidence {}", evidenceId);
+        }
+    }
+
     private NormalizedEventDTO mapToDto(NormalizedEventEntity entity) {
         return new NormalizedEventDTO(
                 entity.getEventId(),

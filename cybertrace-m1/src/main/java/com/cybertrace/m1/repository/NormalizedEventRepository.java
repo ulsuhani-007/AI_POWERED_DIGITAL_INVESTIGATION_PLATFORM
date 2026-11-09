@@ -12,5 +12,7 @@ public interface NormalizedEventRepository extends JpaRepository<NormalizedEvent
     List<NormalizedEventEntity> findByCaseEntity_IdOrderByTimestampAsc(String caseId);
 
     long countByCaseEntity_Id(String caseId);
+
+    void deleteBySourceEvidenceId(String sourceEvidenceId);
 }
 

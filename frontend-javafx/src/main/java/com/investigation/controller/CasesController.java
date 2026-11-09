@@ -36,6 +36,8 @@ public class CasesController implements MainLayoutController.Refreshable {
     @FXML private VBox tableViewContainer;
     @FXML private VBox caseDetailsContainer;
 
+    @FXML private Button btnNewCase;
+
     @FXML private TextField searchField;
     @FXML private ComboBox<String> statusFilterComboBox;
     @FXML private MenuButton sortMenuButton;
@@ -68,6 +70,7 @@ public class CasesController implements MainLayoutController.Refreshable {
     @FXML private Label detailStatusText;
     @FXML private Label detailUpdatedText;
     @FXML private Button setActiveBtn;
+    @FXML private Button btnDetailsDelete;
 
     @FXML private StackPane overlayPane;
 
@@ -182,32 +185,33 @@ public class CasesController implements MainLayoutController.Refreshable {
                 d.getValue().getUpdatedAt() != null ? DateTimeUtils.getRelativeTime(d.getValue().getUpdatedAt()) : DateTimeUtils.formatShortDate(d.getValue().getCreatedAt())
         ));
 
-        // Actions column with Open and Delete buttons
+        // Actions column with professional Open / Delete text pill buttons
         colActions.setCellFactory(col -> new TableCell<>() {
             private final Button openBtn = new Button("Open");
-            private final Button delBtn = new Button("🗑️");
-            private final HBox btnBox = new HBox(6.0, openBtn, delBtn);
+            private final Button delBtn = new Button("Delete");
+            private final HBox btnBox = new HBox(6.0);
+
             {
                 btnBox.setAlignment(Pos.CENTER);
-                openBtn.setStyle("-fx-background-color: #EFF6FF; -fx-text-fill: #2563EB; -fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 3px 8px; -fx-background-radius: 4px; -fx-border-color: #BFDBFE; -fx-border-radius: 4px; -fx-cursor: hand;");
-                delBtn.setStyle("-fx-background-color: #FEF2F2; -fx-text-fill: #DC2626; -fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 3px 8px; -fx-background-radius: 4px; -fx-border-color: #FECACA; -fx-border-radius: 4px; -fx-cursor: hand;");
-                delBtn.setTooltip(new Tooltip("Permanently Delete Case"));
+                openBtn.setStyle("-fx-background-color: #EFF6FF; -fx-text-fill: #2563EB; -fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 3px 10px; -fx-background-radius: 4px; -fx-border-color: #BFDBFE; -fx-border-radius: 4px; -fx-cursor: hand;");
+                delBtn.setStyle("-fx-background-color: #FEF2F2; -fx-text-fill: #DC2626; -fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 3px 10px; -fx-background-radius: 4px; -fx-border-color: #FECACA; -fx-border-radius: 4px; -fx-cursor: hand;");
+
                 openBtn.setTooltip(new Tooltip("Open Case Details"));
+                delBtn.setTooltip(new Tooltip("Permanently Delete Case"));
 
                 openBtn.setOnAction(e -> {
                     CaseModel cm = getTableRow().getItem();
-                    if (cm != null) {
-                        openCaseDetails(cm);
-                    }
+                    if (cm != null) openCaseDetails(cm);
                 });
 
                 delBtn.setOnAction(e -> {
                     CaseModel cm = getTableRow().getItem();
-                    if (cm != null) {
-                        promptDeleteCase(cm);
-                    }
+                    if (cm != null) promptDeleteCase(cm);
                 });
+
+                btnBox.getChildren().addAll(openBtn, delBtn);
             }
+
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
@@ -219,7 +223,7 @@ public class CasesController implements MainLayoutController.Refreshable {
             }
         });
 
-        // Double click row opens details, right-click context menu offers Open / Delete
+        // Double click row opens details, right-click context menu offers actions
         casesTable.setRowFactory(tv -> {
             TableRow<CaseModel> row = new TableRow<>();
 
@@ -228,18 +232,22 @@ public class CasesController implements MainLayoutController.Refreshable {
             openItem.setOnAction(e -> {
                 if (!row.isEmpty()) openCaseDetails(row.getItem());
             });
+
             MenuItem deleteItem = new MenuItem("Delete Case");
-            deleteItem.setStyle("-fx-text-fill: #DC2626;");
+            deleteItem.setStyle("-fx-text-fill: #DC2626; -fx-font-weight: bold;");
             deleteItem.setOnAction(e -> {
                 if (!row.isEmpty()) promptDeleteCase(row.getItem());
             });
+
             contextMenu.getItems().addAll(openItem, new SeparatorMenuItem(), deleteItem);
 
-            row.contextMenuProperty().bind(
-                    javafx.beans.binding.Bindings.when(row.emptyProperty())
-                            .then((ContextMenu) null)
-                            .otherwise(contextMenu)
-            );
+            row.setOnContextMenuRequested(e -> {
+                if (row.isEmpty()) {
+                    contextMenu.hide();
+                    return;
+                }
+                contextMenu.show(row, e.getScreenX(), e.getScreenY());
+            });
 
             row.setOnMouseClicked(event -> {
                 if (!row.isEmpty() && event.getClickCount() == 2) {
@@ -248,7 +256,6 @@ public class CasesController implements MainLayoutController.Refreshable {
             });
             return row;
         });
-
         casesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 this.selectedCase = newVal;
@@ -293,7 +300,6 @@ public class CasesController implements MainLayoutController.Refreshable {
                     (c.getLeadInvestigator() != null && c.getLeadInvestigator().toLowerCase().contains(query));
         });
     }
-
     // Sorting actions
     @FXML private void onSortByNumber() { masterData.sort(Comparator.comparing(CaseModel::getCaseNumber)); }
     @FXML private void onSortByTitle() { masterData.sort(Comparator.comparing(CaseModel::getTitle)); }
@@ -383,6 +389,10 @@ public class CasesController implements MainLayoutController.Refreshable {
         detailStatusText.setStyle("-fx-font-weight: bold; -fx-text-fill: " + (cm.getStatus() == CaseStatus.CLOSED ? "#059669;" : "#D97706;"));
 
         detailUpdatedText.setText(cm.getUpdatedAt() != null ? DateTimeUtils.getRelativeTime(cm.getUpdatedAt()) : "Recently");
+
+        if (btnDetailsDelete != null) {
+            btnDetailsDelete.setText("Delete Case");
+        }
 
         // Banner thumbnail
         detailThumbnailContainer.getChildren().setAll(
@@ -616,18 +626,18 @@ public class CasesController implements MainLayoutController.Refreshable {
         }
     }
 
-    private void promptDeleteCase(CaseModel targetCase) {
+    public void promptDeleteCase(CaseModel targetCase) {
         if (targetCase == null) return;
 
         boolean confirm = UiUtils.showConfirmation(
                 "Confirm Case Deletion",
                 "Delete " + targetCase.getCaseNumber() + "?",
-                "Are you sure you want to permanently delete case '" + targetCase.getTitle() + "'?\n" +
-                        "This operation will permanently remove the case, its uploaded evidence, normalized events, and forensic reports from PostgreSQL."
+                "Are you sure you want to permanently delete case '" + targetCase.getTitle() + "'?\n\n" +
+                        "This operation will permanently remove the case, its uploaded evidence, normalized events, and forensic reports from the database."
         );
-
         if (!confirm) return;
 
+        showLoading("Deleting case...");
         Task<Boolean> task = new Task<>() {
             @Override
             protected Boolean call() throws Exception {
@@ -636,12 +646,13 @@ public class CasesController implements MainLayoutController.Refreshable {
         };
 
         task.setOnSucceeded(e -> {
-            if (task.getValue()) {
+            hideLoading();
+            if (Boolean.TRUE.equals(task.getValue())) {
                 UiUtils.showInfo("Case Deleted", "Case " + targetCase.getCaseNumber() + " was deleted.");
                 if (targetCase.equals(AppConfig.getInstance().getActiveCase())) {
                     AppConfig.getInstance().setActiveCase(null);
                 }
-                if (selectedCase != null && selectedCase.equals(targetCase)) {
+                if (selectedCase != null && selectedCase.equals(targetCase) && caseDetailsContainer.isVisible()) {
                     onCloseDetails();
                 }
                 refreshData();
@@ -650,7 +661,13 @@ public class CasesController implements MainLayoutController.Refreshable {
             }
         });
 
-        task.setOnFailed(e -> UiUtils.showError("Deletion Error", task.getException().getMessage()));
-        new Thread(task).start();
+        task.setOnFailed(e -> {
+            hideLoading();
+            UiUtils.showError("Deletion Error", task.getException() != null ? task.getException().getMessage() : "Unknown error");
+        });
+
+        Thread th = new Thread(task);
+        th.setDaemon(true);
+        th.start();
     }
 }

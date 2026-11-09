@@ -54,4 +54,9 @@ public class MockEvidenceService implements EvidenceService {
         generator.addEvidence(caseId, evidence);
         return evidence;
     }
+
+    @Override
+    public boolean deleteEvidence(String caseId, String evidenceId) {
+        return true;
+    }
 }

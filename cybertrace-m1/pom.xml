@@ -100,6 +100,7 @@
     </dependencies>
 
     <build>
+        <finalName>cybertrace-m1-backend-app</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

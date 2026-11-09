@@ -27,7 +27,7 @@
                 <Region HBox.hgrow="ALWAYS"/>
 
                 <!-- Primary Action: + New Case -->
-                <Button text="+ New Case" onAction="#onNewCase" styleClass="btn-primary"
+                <Button fx:id="btnNewCase" text="+ New Case" onAction="#onNewCase" styleClass="btn-primary"
                         style="-fx-font-size: 13px; -fx-padding: 8px 18px;"/>
 
                 <!-- Search Input -->
@@ -75,7 +75,7 @@
                         <TableColumn fx:id="colEvents" text="EVENTS" prefWidth="80.0"/>
                         <TableColumn fx:id="colAnomalies" text="ANOMALIES" prefWidth="90.0"/>
                         <TableColumn fx:id="colCreated" text="LAST UPDATED" prefWidth="110.0"/>
-                        <TableColumn fx:id="colActions" text="ACTIONS" prefWidth="140.0"/>
+                        <TableColumn fx:id="colActions" text="ACTIONS" prefWidth="180.0"/>
                     </columns>
                     <placeholder>
                         <Label text="No investigation cases matching filter criteria."/>
@@ -238,8 +238,8 @@
 
                     <Region VBox.vgrow="ALWAYS"/>
                     <HBox spacing="8.0">
-                        <Button text="✏️ Edit Case" onAction="#onEditCase" styleClass="btn-secondary" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        <Button text="🗑️ Delete Case" onAction="#onDeleteCase" styleClass="btn-danger" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Edit Case" onAction="#onEditCase" styleClass="btn-secondary" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button fx:id="btnDetailsDelete" text="Delete Case" onAction="#onDeleteCase" styleClass="btn-danger" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                     </HBox>
                 </VBox>
             </GridPane>

@@ -9,4 +9,5 @@ import java.util.function.Consumer;
 public interface EvidenceService {
     List<EvidenceModel> getEvidenceByCase(String caseId) throws Exception;
     EvidenceModel uploadEvidence(String caseId, File file, String description, Consumer<Double> progressCallback) throws Exception;
+    boolean deleteEvidence(String caseId, String evidenceId) throws Exception;
 }
