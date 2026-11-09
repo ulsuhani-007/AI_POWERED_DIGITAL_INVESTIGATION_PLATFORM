@@ -81,6 +81,22 @@ public class HistoricalCasesDataInitializer implements CommandLineRunner {
     public void run(String... args) {
         log.info("Checking historical investigation demonstration cases...");
 
+        // Purge any legacy simulated demo cases from PostgreSQL, preserving only real cases and historical demonstration cases
+        List<CaseEntity> fakeCases = caseRepository.findAll().stream()
+                .filter(c -> {
+                    String num = c.getCaseNumber() != null ? c.getCaseNumber() : "";
+                    String title = c.getTitle() != null ? c.getTitle() : "";
+                    return num.contains("0891") || num.contains("0904") || num.contains("0912") || num.contains("0870")
+                            || title.contains("[MOCK]") || title.contains("Project Apex") || title.contains("Credential Stuffing")
+                            || title.contains("Air-Gapped Vault") || title.contains("Pre-Attack Reconnaissance");
+                })
+                .toList();
+
+        if (!fakeCases.isEmpty()) {
+            log.info("Purging {} legacy simulated/fake demo cases from database...", fakeCases.size());
+            caseRepository.deleteAll(fakeCases);
+        }
+
         seedCase1Lufthansa();
         seedCase2Mundhra();
         seedCase3Bhopal();

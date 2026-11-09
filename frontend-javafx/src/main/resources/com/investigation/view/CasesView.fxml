@@ -75,7 +75,7 @@
                         <TableColumn fx:id="colEvents" text="EVENTS" prefWidth="80.0"/>
                         <TableColumn fx:id="colAnomalies" text="ANOMALIES" prefWidth="90.0"/>
                         <TableColumn fx:id="colCreated" text="LAST UPDATED" prefWidth="110.0"/>
-                        <TableColumn fx:id="colActions" text="ACTIONS" prefWidth="90.0"/>
+                        <TableColumn fx:id="colActions" text="ACTIONS" prefWidth="140.0"/>
                     </columns>
                     <placeholder>
                         <Label text="No investigation cases matching filter criteria."/>

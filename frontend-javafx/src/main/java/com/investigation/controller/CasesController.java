@@ -182,15 +182,29 @@ public class CasesController implements MainLayoutController.Refreshable {
                 d.getValue().getUpdatedAt() != null ? DateTimeUtils.getRelativeTime(d.getValue().getUpdatedAt()) : DateTimeUtils.formatShortDate(d.getValue().getCreatedAt())
         ));
 
-        // Actions column with Open Case button
+        // Actions column with Open and Delete buttons
         colActions.setCellFactory(col -> new TableCell<>() {
             private final Button openBtn = new Button("Open");
+            private final Button delBtn = new Button("🗑️");
+            private final HBox btnBox = new HBox(6.0, openBtn, delBtn);
             {
-                openBtn.setStyle("-fx-background-color: #EFF6FF; -fx-text-fill: #2563EB; -fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 3px 10px; -fx-background-radius: 4px; -fx-border-color: #BFDBFE; -fx-border-radius: 4px; -fx-cursor: hand;");
+                btnBox.setAlignment(Pos.CENTER);
+                openBtn.setStyle("-fx-background-color: #EFF6FF; -fx-text-fill: #2563EB; -fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 3px 8px; -fx-background-radius: 4px; -fx-border-color: #BFDBFE; -fx-border-radius: 4px; -fx-cursor: hand;");
+                delBtn.setStyle("-fx-background-color: #FEF2F2; -fx-text-fill: #DC2626; -fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 3px 8px; -fx-background-radius: 4px; -fx-border-color: #FECACA; -fx-border-radius: 4px; -fx-cursor: hand;");
+                delBtn.setTooltip(new Tooltip("Permanently Delete Case"));
+                openBtn.setTooltip(new Tooltip("Open Case Details"));
+
                 openBtn.setOnAction(e -> {
                     CaseModel cm = getTableRow().getItem();
                     if (cm != null) {
                         openCaseDetails(cm);
+                    }
+                });
+
+                delBtn.setOnAction(e -> {
+                    CaseModel cm = getTableRow().getItem();
+                    if (cm != null) {
+                        promptDeleteCase(cm);
                     }
                 });
             }
@@ -200,14 +214,33 @@ public class CasesController implements MainLayoutController.Refreshable {
                 if (empty || getTableRow() == null || getTableRow().getItem() == null) {
                     setGraphic(null);
                 } else {
-                    setGraphic(openBtn);
+                    setGraphic(btnBox);
                 }
             }
         });
 
-        // Double click row opens details
+        // Double click row opens details, right-click context menu offers Open / Delete
         casesTable.setRowFactory(tv -> {
             TableRow<CaseModel> row = new TableRow<>();
+
+            ContextMenu contextMenu = new ContextMenu();
+            MenuItem openItem = new MenuItem("Open Case Details");
+            openItem.setOnAction(e -> {
+                if (!row.isEmpty()) openCaseDetails(row.getItem());
+            });
+            MenuItem deleteItem = new MenuItem("Delete Case");
+            deleteItem.setStyle("-fx-text-fill: #DC2626;");
+            deleteItem.setOnAction(e -> {
+                if (!row.isEmpty()) promptDeleteCase(row.getItem());
+            });
+            contextMenu.getItems().addAll(openItem, new SeparatorMenuItem(), deleteItem);
+
+            row.contextMenuProperty().bind(
+                    javafx.beans.binding.Bindings.when(row.emptyProperty())
+                            .then((ContextMenu) null)
+                            .otherwise(contextMenu)
+            );
+
             row.setOnMouseClicked(event -> {
                 if (!row.isEmpty() && event.getClickCount() == 2) {
                     openCaseDetails(row.getItem());
@@ -578,13 +611,19 @@ public class CasesController implements MainLayoutController.Refreshable {
 
     @FXML
     private void onDeleteCase() {
-        if (selectedCase == null) return;
+        if (selectedCase != null) {
+            promptDeleteCase(selectedCase);
+        }
+    }
+
+    private void promptDeleteCase(CaseModel targetCase) {
+        if (targetCase == null) return;
 
         boolean confirm = UiUtils.showConfirmation(
                 "Confirm Case Deletion",
-                "Delete " + selectedCase.getCaseNumber() + "?",
-                "Are you sure you want to permanently delete case '" + selectedCase.getTitle() + "'?\n" +
-                        "This operation will remove associated evidence records from PostgreSQL."
+                "Delete " + targetCase.getCaseNumber() + "?",
+                "Are you sure you want to permanently delete case '" + targetCase.getTitle() + "'?\n" +
+                        "This operation will permanently remove the case, its uploaded evidence, normalized events, and forensic reports from PostgreSQL."
         );
 
         if (!confirm) return;
@@ -592,17 +631,19 @@ public class CasesController implements MainLayoutController.Refreshable {
         Task<Boolean> task = new Task<>() {
             @Override
             protected Boolean call() throws Exception {
-                return ServiceFactory.getInstance().getCaseService().deleteCase(selectedCase.getId());
+                return ServiceFactory.getInstance().getCaseService().deleteCase(targetCase.getId());
             }
         };
 
         task.setOnSucceeded(e -> {
             if (task.getValue()) {
-                UiUtils.showInfo("Case Deleted", "Case " + selectedCase.getCaseNumber() + " was deleted.");
-                if (selectedCase.equals(AppConfig.getInstance().getActiveCase())) {
+                UiUtils.showInfo("Case Deleted", "Case " + targetCase.getCaseNumber() + " was deleted.");
+                if (targetCase.equals(AppConfig.getInstance().getActiveCase())) {
                     AppConfig.getInstance().setActiveCase(null);
                 }
-                onCloseDetails();
+                if (selectedCase != null && selectedCase.equals(targetCase)) {
+                    onCloseDetails();
+                }
                 refreshData();
             } else {
                 UiUtils.showError("Deletion Failed", "Backend rejected case deletion.");
