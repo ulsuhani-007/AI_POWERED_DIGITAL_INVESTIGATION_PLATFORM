@@ -192,6 +192,50 @@ if ($pgListening) {
     # Brief pause to ensure PostgreSQL transitions from socket-bind to accepting SQL connections
     Start-Sleep -Seconds 2
     Write-Host "  PostgreSQL is ACTIVE and accepting connections on port 5432." -ForegroundColor Green
+    
+    # Safely verify / create database cybertrace_db if createdb is available
+    $createdbCandidates = @(
+        (Join-Path $env:USERPROFILE "pgsql\bin\createdb.exe"),
+        "C:\Program Files\PostgreSQL\17\bin\createdb.exe",
+        "C:\Program Files\PostgreSQL\16\bin\createdb.exe",
+        "C:\Program Files\PostgreSQL\15\bin\createdb.exe"
+    )
+    $createdbExe = $null
+    foreach ($cand in $createdbCandidates) {
+        if (Test-Path $cand -ErrorAction SilentlyContinue) {
+            $createdbExe = $cand
+            break
+        }
+    }
+    if (-not $createdbExe) {
+        $cCmd = Get-Command createdb -ErrorAction SilentlyContinue
+        if ($cCmd) { $createdbExe = $cCmd.Source }
+    }
+    
+    if ($createdbExe) {
+        $dbUser = if ($env:DB_USERNAME) { $env:DB_USERNAME } else { "postgres" }
+        $dbPass = if ($env:DB_PASSWORD) { $env:DB_PASSWORD } else { "postgres" }
+        
+        $cpsi = New-Object System.Diagnostics.ProcessStartInfo
+        $cpsi.FileName = $createdbExe
+        $cpsi.Arguments = "-U $dbUser -h 127.0.0.1 -p 5432 cybertrace_db"
+        $cpsi.EnvironmentVariables["PGPASSWORD"] = $dbPass
+        $cpsi.RedirectStandardError = $true
+        $cpsi.RedirectStandardOutput = $true
+        $cpsi.UseShellExecute = $false
+        $cpsi.CreateNoWindow = $true
+        
+        try {
+            $cproc = [System.Diagnostics.Process]::Start($cpsi)
+            $null = $cproc.WaitForExit(6000)
+            $cerr = $cproc.StandardError.ReadToEnd()
+            if ($cproc.ExitCode -eq 0) {
+                Write-Host "  Database 'cybertrace_db' initialized successfully." -ForegroundColor Green
+            } elseif ($cerr -match "already exists") {
+                Write-Host "  Database 'cybertrace_db' verified." -ForegroundColor Gray
+            }
+        } catch {}
+    }
 } else {
     Write-Host "CRITICAL: PostgreSQL is NOT listening on localhost:5432." -ForegroundColor Red
     Write-Host "The CyberTrace platform requires PostgreSQL to store cases, evidence, and audit logs." -ForegroundColor Yellow
