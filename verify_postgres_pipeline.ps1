@@ -107,8 +107,14 @@ $env:DB_USERNAME = "postgres"
 $env:DB_PASSWORD = "postgres"
 $env:SPRING_PROFILES_ACTIVE = "dev"
 
+$m1Jar = if (Test-Path "cybertrace-m1\target\cybertrace-m1-backend-app.jar") {
+    "cybertrace-m1\target\cybertrace-m1-backend-app.jar"
+} else {
+    "cybertrace-m1\target\cybertrace-m1-backend-1.0.0-SNAPSHOT.jar"
+}
+
 $m1Proc = Start-Process -FilePath "java" `
-    -ArgumentList "-jar", "cybertrace-m1\target\cybertrace-m1-backend-1.0.0-SNAPSHOT.jar" `
+    -ArgumentList "-jar", $m1Jar `
     -PassThru -NoNewWindow
 
 try {

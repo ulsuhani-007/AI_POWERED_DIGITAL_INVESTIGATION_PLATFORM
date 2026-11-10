@@ -1,0 +1,5 @@
+id,timestamp,source,event_type,user,ip_address,device,success,bytes,description
+N001,2026-11-09 11:00:00,Network CSV,NETWORK_TRANSFER,alice,10.10.10.21,WS-01,true,12000,Normal outbound transfer
+N002,2026-11-09 11:05:00,Network CSV,NETWORK_TRANSFER,bob,10.10.10.22,WS-02,true,9000,Normal outbound transfer
+N003,2026-11-10 00:20:00,Network CSV,NETWORK_TRANSFER,alice,10.10.10.21,WS-01,true,95000000,Very large outbound transfer
+N004,2026-11-10 00:21:00,Network CSV,NETWORK_TRANSFER,alice,10.10.10.21,WS-01,true,88000000,Large outbound transfer

@@ -41,6 +41,17 @@ Write-Host "=========================================================="
 Write-Host "STARTING MICROSERVICES M3 (:8082), M2 (:8081), M1 (:8080)"
 Write-Host "=========================================================="
 
+# Determine M1 jar name dynamically
+$m1Jar = if (Test-Path "cybertrace-m1\target\cybertrace-m1-backend-app.jar") {
+    "cybertrace-m1\target\cybertrace-m1-backend-app.jar"
+} else {
+    "cybertrace-m1\target\cybertrace-m1-backend-1.0.0-SNAPSHOT.jar"
+}
+
+# Determine profile based on PostgreSQL availability
+$m1Profile = if (Test-TcpPort -HostName "127.0.0.1" -Port 5432) { "dev" } else { "h2" }
+Write-Host "Database mode: $(if ($m1Profile -eq 'dev') { 'PostgreSQL (:5432)' } else { 'Embedded Persistent H2 (:8080)' })"
+
 # 1. Start M3 (:8082)
 $m3Proc = Start-Process -FilePath "java" `
     -ArgumentList "-jar", "cybertrace-m3\target\cybertrace-m3-analysis-engine-1.0.0-SNAPSHOT.jar" `
@@ -53,7 +64,7 @@ $m2Proc = Start-Process -FilePath "java" `
 
 # 3. Start M1 (:8080)
 $m1Proc = Start-Process -FilePath "java" `
-    -ArgumentList "-jar", "cybertrace-m1\target\cybertrace-m1-backend-1.0.0-SNAPSHOT.jar" `
+    -ArgumentList "-jar", $m1Jar, "--spring.profiles.active=$m1Profile" `
     -PassThru -NoNewWindow
 
 try {

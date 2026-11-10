@@ -14,27 +14,12 @@ A new team member can get the entire platform up and running in just a few minut
      ```powershell
      java -version
      ```
-2. **Install PostgreSQL 16+**:
-   - Download and install PostgreSQL 16 or later ([PostgreSQL Official Downloads](https://www.postgresql.org/download/windows/)).
-   - Ensure the PostgreSQL Windows Service is running:
-     ```powershell
-     Start-Service postgresql*
-     ```
-3. **Create the Database `cybertrace_db`**:
-   - Run the standard command in PowerShell or cmd:
-     ```powershell
-     createdb -U postgres cybertrace_db
-     ```
-   - *Default credentials assumed by the application*:
-     - User: `postgres`
-     - Password: `postgres`
-     - Port: `5432`
-     - Database: `cybertrace_db`
-   - *Custom Credentials*: If your PostgreSQL installation uses a custom password or username, set the environment variables before running:
-     ```powershell
-     $env:DB_USERNAME = "your_postgres_user"
-     $env:DB_PASSWORD = "your_postgres_password"
-     ```
+2. **Database Configuration (Zero-Config or PostgreSQL 16+)**:
+   - *Zero-Config (Out of the Box)*: If PostgreSQL is not installed, the platform automatically launches with an embedded persistent database engine (`./data/cybertrace_db`) with full persistence across restarts and zero manual configuration required.
+   - *Production / Native PostgreSQL 16+ (Optional)*:
+     - Install PostgreSQL 16+ and ensure the Windows Service is running (`Start-Service postgresql*`).
+     - Create database: `createdb -U postgres cybertrace_db` (defaults: `postgres`/`postgres` on `5432`).
+     - Custom credentials can be set via `$env:DB_USERNAME` and `$env:DB_PASSWORD`.
 4. **Clone the Repository**:
    ```powershell
    git clone <repository-url>

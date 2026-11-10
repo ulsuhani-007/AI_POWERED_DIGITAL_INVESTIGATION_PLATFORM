@@ -205,9 +205,12 @@ if (-not $pgListening) {
     $pgListening = Test-PortListening -HostName "127.0.0.1" -Port 5432 -TimeoutMs 1000
 }
 
+$m1Profile = "dev"
+
 if ($pgListening) {
     Start-Sleep -Seconds 1
     Write-Host "  PostgreSQL is ACTIVE and accepting connections on port 5432." -ForegroundColor Green
+    $m1Profile = "dev"
     
     # Safely verify / create database cybertrace_db if createdb is available
     $createdbExe = $null
@@ -258,15 +261,10 @@ if ($pgListening) {
         } catch {}
     }
 } else {
-    Write-Host "CRITICAL: PostgreSQL is NOT listening on localhost:5432." -ForegroundColor Red
-    Write-Host "The CyberTrace platform requires PostgreSQL 16+ to store cases, evidence, and audit logs." -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Please install and start PostgreSQL before running this launcher:" -ForegroundColor Cyan
-    Write-Host "  1. Install PostgreSQL 16+ (https://www.postgresql.org/download/windows/)" -ForegroundColor White
-    Write-Host "  2. Ensure PostgreSQL service is started: Start-Service postgresql*" -ForegroundColor White
-    Write-Host "  3. Ensure database exists: createdb -U postgres cybertrace_db" -ForegroundColor White
-    Write-Host ""
-    exit 1
+    Write-Host "  PostgreSQL is not listening on localhost:5432." -ForegroundColor Yellow
+    Write-Host "  [AUTO-FALLBACK] Activating Embedded Persistent Database Engine (H2 file-based storage: data/cybertrace_db)." -ForegroundColor Cyan
+    Write-Host "  All case data, evidence, and AI findings will persist locally." -ForegroundColor Gray
+    $m1Profile = "h2"
 }
 
 # Locate Maven Wrapper
@@ -283,9 +281,10 @@ if (-not (Test-Path $m1Jar)) {
 }
 $m2Jar = Join-Path $ProjectRoot "cybertrace-m2\target\cybertrace-m2-timeline-engine-1.0.0-SNAPSHOT.jar"
 $m3Jar = Join-Path $ProjectRoot "cybertrace-m3\target\cybertrace-m3-analysis-engine-1.0.0-SNAPSHOT.jar"
+$frontendJar = Join-Path $ProjectRoot "frontend-javafx\target\frontend-javafx-1.0.0-SNAPSHOT.jar"
 
 # Build jars if requested or missing
-if ($BuildJars -or (-not (Test-Path $m1Jar)) -or (-not (Test-Path $m2Jar)) -or (-not (Test-Path $m3Jar))) {
+if ($BuildJars -or (-not (Test-Path $m1Jar)) -or (-not (Test-Path $m2Jar)) -or (-not (Test-Path $m3Jar)) -or (-not (Test-Path $frontendJar))) {
     Write-Host "`nBuilding application modules with Maven Wrapper (first run)..." -ForegroundColor Yellow
     if (-not (Test-Path $m1Jar)) {
         Write-Host "  Packaging M1 Backend..." -ForegroundColor Gray
@@ -302,12 +301,20 @@ if ($BuildJars -or (-not (Test-Path $m1Jar)) -or (-not (Test-Path $m2Jar)) -or (
         Write-Host "  Packaging M3 Analysis Engine..." -ForegroundColor Gray
         & $mvnw -f (Join-Path $ProjectRoot "cybertrace-m3\pom.xml") package -DskipTests
     }
+    if (-not (Test-Path $frontendJar)) {
+        Write-Host "  Packaging JavaFX Desktop Workstation..." -ForegroundColor Gray
+        & $mvnw -f (Join-Path $ProjectRoot "frontend-javafx\pom.xml") package -DskipTests
+    }
 }
 
-# Prepare logs directory
+# Prepare logs and data directories
 $logDir = Join-Path $ProjectRoot "target\logs"
 if (-not (Test-Path $logDir)) {
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+$dataDir = Join-Path $ProjectRoot "data"
+if (-not (Test-Path $dataDir)) {
+    New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
 }
 $m1Log = Join-Path $logDir "m1-backend.log"
 $m1Err = Join-Path $logDir "m1-backend-err.log"
@@ -346,8 +353,8 @@ if (Test-PortListening -HostName "127.0.0.1" -Port 8080 -TimeoutMs 500) {
 }
 
 if (-not $m1Running) {
-    Write-Host "  Launching M1 Backend on port 8080..." -ForegroundColor Gray
-    $m1Proc = Start-Process -FilePath $javaExe -ArgumentList "-jar `"$m1Jar`" --spring.profiles.active=dev" `
+    Write-Host "  Launching M1 Backend on port 8080 (Profile: $m1Profile)..." -ForegroundColor Gray
+    $m1Proc = Start-Process -FilePath $javaExe -ArgumentList "-jar `"$m1Jar`" --spring.profiles.active=$m1Profile" `
         -WorkingDirectory $ProjectRoot `
         -RedirectStandardOutput $m1Log `
         -RedirectStandardError $m1Err `
@@ -468,8 +475,13 @@ Write-Host "  Password: AdminPass123!" -ForegroundColor White
 # [5/5] Starting JavaFX...
 Write-Host "`n[5/5] Starting JavaFX..." -ForegroundColor Yellow
 if (-not $SkipFrontend) {
-    $frontendPom = Join-Path $ProjectRoot "frontend-javafx\pom.xml"
-    & $mvnw -f $frontendPom javafx:run
+    if (Test-Path $frontendJar) {
+        Write-Host "  Launching JavaFX Investigation Workstation..." -ForegroundColor Green
+        & $javaExe --enable-native-access=ALL-UNNAMED -jar $frontendJar
+    } else {
+        $frontendPom = Join-Path $ProjectRoot "frontend-javafx\pom.xml"
+        & $mvnw -f $frontendPom javafx:run
+    }
 } else {
     Write-Host "  JavaFX launch skipped (-SkipFrontend). Backend services active in background." -ForegroundColor Green
 }
