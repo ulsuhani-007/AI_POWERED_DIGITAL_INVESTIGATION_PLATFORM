@@ -1,0 +1,5 @@
+id,timestamp,source,event_type,user,ip_address,device,success,bytes,description
+S001,2026-11-09 10:00:00,System Log,FILE_ACCESS,alice,10.10.10.21,WS-01,true,4500,Opened finance document
+S002,2026-11-09 10:05:00,System Log,FILE_ACCESS,alice,10.10.10.21,WS-01,true,6200,Opened payroll document
+S003,2026-11-10 00:12:00,System Log,FILE_ACCESS,alice,10.10.10.21,WS-01,true,7800,Accessed confidential finance archive
+S004,2026-11-10 00:14:00,System Log,FILE_ACCESS,alice,10.10.10.21,WS-01,true,8100,Accessed confidential payroll archive

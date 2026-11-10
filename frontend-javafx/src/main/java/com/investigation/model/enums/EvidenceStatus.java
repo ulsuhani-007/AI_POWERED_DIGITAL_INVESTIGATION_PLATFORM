@@ -3,6 +3,7 @@ package com.investigation.model.enums;
 public enum EvidenceStatus {
     UPLOADED("Uploaded", "#38BDF8"),
     PROCESSING("Processing", "#F59E0B"),
+    PROCESSED("Processed", "#10B981"),
     ANALYZED("Analyzed", "#10B981"),
     FAILED("Failed", "#EF4444");
 

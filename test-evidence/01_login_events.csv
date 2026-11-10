@@ -1,0 +1,8 @@
+id,timestamp,source,event_type,user,ip_address,device,success,bytes,description
+L001,2026-11-09 08:15:00,Login CSV,LOGIN,alice,10.10.10.21,WS-01,true,0,Normal morning login
+L002,2026-11-09 08:17:00,Login CSV,LOGIN,bob,10.10.10.22,WS-02,true,0,Normal morning login
+L003,2026-11-09 23:48:00,Login CSV,LOGIN,alice,10.10.10.21,WS-01,true,0,Late-night login
+L004,2026-11-10 00:03:00,Login CSV,LOGIN_FAILURE,alice,10.10.10.21,WS-01,false,0,Failed login
+L005,2026-11-10 00:04:00,Login CSV,LOGIN_FAILURE,alice,10.10.10.21,WS-01,false,0,Failed login
+L006,2026-11-10 00:05:00,Login CSV,LOGIN_FAILURE,alice,10.10.10.21,WS-01,false,0,Failed login
+L007,2026-11-10 00:06:00,Login CSV,LOGIN,alice,10.10.10.21,WS-01,true,0,Successful login after failures

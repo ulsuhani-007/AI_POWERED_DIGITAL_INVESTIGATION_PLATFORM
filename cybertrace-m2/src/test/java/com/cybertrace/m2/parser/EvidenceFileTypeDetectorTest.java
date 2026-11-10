@@ -22,7 +22,8 @@ class EvidenceFileTypeDetectorTest {
                 new LoginEvidenceParser(),
                 new BrowserActivityEvidenceParser(),
                 new FileAccessEvidenceParser(),
-                new NetworkEventsEvidenceParser()
+                new NetworkEventsEvidenceParser(),
+                new UnifiedEvidenceParser()
         );
         detector = new EvidenceFileTypeDetector(parsers);
     }
@@ -57,6 +58,14 @@ class EvidenceFileTypeDetectorTest {
         Set<String> headers = detector.extractHeadersFromLine("timestamp,sourceIp,destinationIp,port,bytes,device");
         EvidenceFileType type = detector.detectType(headers);
         assertThat(type).isEqualTo(EvidenceFileType.NETWORK);
+    }
+
+    @Test
+    @DisplayName("Should detect UNIFIED file type from unified evidence headers")
+    void testDetectUnified() {
+        Set<String> headers = detector.extractHeadersFromLine("id,timestamp,source,event_type,user,ip_address,device,success,bytes,description");
+        EvidenceFileType type = detector.detectType(headers);
+        assertThat(type).isEqualTo(EvidenceFileType.UNIFIED);
     }
 
     @Test

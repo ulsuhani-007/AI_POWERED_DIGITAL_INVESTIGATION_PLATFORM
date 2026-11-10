@@ -150,7 +150,7 @@ public class EvidenceController implements MainLayoutController.Refreshable {
                         badge = UiUtils.createBadge("Processing Failed", "#991B1B", "#FEE2E2", "#FECACA");
                     } else if (em.getStatus() == EvidenceStatus.ANALYZED) {
                         badge = UiUtils.createBadge("Analyzed", "#1E40AF", "#DBEAFE", "#BFDBFE");
-                    } else if (em.getEventCount() > 0) {
+                    } else if (em.getStatus() == EvidenceStatus.PROCESSED || em.getEventCount() > 0) {
                         badge = UiUtils.createBadge("Processed", "#065F46", "#D1FAE5", "#A7F3D0");
                     } else {
                         badge = UiUtils.createBadge("Uploaded", "#92400E", "#FEF3C7", "#FDE68A");
@@ -212,7 +212,7 @@ public class EvidenceController implements MainLayoutController.Refreshable {
         } else if (em.getStatus() == EvidenceStatus.ANALYZED) {
             detailStatus.setText("Analyzed");
             detailStatus.setStyle("-fx-background-color: #DBEAFE; -fx-text-fill: #1E40AF; -fx-border-color: #BFDBFE; -fx-padding: 3px 10px; -fx-background-radius: 12px; -fx-border-radius: 12px; -fx-font-size: 11px; -fx-font-weight: bold;");
-        } else if (em.getEventCount() > 0) {
+        } else if (em.getStatus() == EvidenceStatus.PROCESSED || em.getEventCount() > 0) {
             detailStatus.setText("Processed");
             detailStatus.setStyle("-fx-background-color: #D1FAE5; -fx-text-fill: #065F46; -fx-border-color: #A7F3D0; -fx-padding: 3px 10px; -fx-background-radius: 12px; -fx-border-radius: 12px; -fx-font-size: 11px; -fx-font-weight: bold;");
         } else {
@@ -274,7 +274,7 @@ public class EvidenceController implements MainLayoutController.Refreshable {
     // Filter handlers
     @FXML private void onFilterAll() { filteredEvidence.setPredicate(p -> true); }
     @FXML private void onFilterVerified() { filteredEvidence.setPredicate(e -> e.getStatus() == EvidenceStatus.ANALYZED || e.getEventCount() > 0); }
-    @FXML private void onFilterProcessing() { filteredEvidence.setPredicate(e -> e.getStatus() != EvidenceStatus.ANALYZED && e.getEventCount() == 0); }
+    @FXML private void onFilterProcessing() { filteredEvidence.setPredicate(e -> e.getStatus() != EvidenceStatus.ANALYZED && e.getStatus() != EvidenceStatus.PROCESSED && e.getEventCount() == 0); }
 
     @FXML private void onShowTableView() {
         tableViewBtn.setStyle("-fx-background-color: #FFFFFF; -fx-text-fill: #0F172A; -fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 5px 12px; -fx-background-radius: 4px;");

@@ -1,0 +1,4 @@
+id,timestamp,source,event_type,user,ip_address,device,success,bytes,description
+B001,2026-11-09 09:10:00,Browser CSV,BROWSER_VISIT,alice,10.10.10.21,WS-01,true,1200,Visited internal portal
+B002,2026-11-09 09:12:00,Browser CSV,BROWSER_VISIT,alice,10.10.10.21,WS-01,true,1500,Visited company mail
+B003,2026-11-10 00:10:00,Browser CSV,BROWSER_VISIT,alice,10.10.10.21,WS-01,true,900,Visited external file-sharing site

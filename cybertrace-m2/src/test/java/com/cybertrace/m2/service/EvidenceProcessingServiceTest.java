@@ -11,6 +11,7 @@ import com.cybertrace.m2.parser.EvidenceParserFactory;
 import com.cybertrace.m2.parser.FileAccessEvidenceParser;
 import com.cybertrace.m2.parser.LoginEvidenceParser;
 import com.cybertrace.m2.parser.NetworkEventsEvidenceParser;
+import com.cybertrace.m2.parser.UnifiedEvidenceParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,8 @@ class EvidenceProcessingServiceTest {
                 new LoginEvidenceParser(),
                 new BrowserActivityEvidenceParser(),
                 new FileAccessEvidenceParser(),
-                new NetworkEventsEvidenceParser()
+                new NetworkEventsEvidenceParser(),
+                new UnifiedEvidenceParser()
         );
         EvidenceFileTypeDetector detector = new EvidenceFileTypeDetector(parsers);
         EvidenceParserFactory factory = new EvidenceParserFactory(parsers, detector);
@@ -121,5 +123,31 @@ class EvidenceProcessingServiceTest {
         assertThat(response.getErrors().get(0).getReason()).contains("Unparseable date: 26-99-2026");
         assertThat(response.getErrors().get(1).getReason()).isEqualTo("Blank row");
         assertThat(response.getErrors().get(2).getReason()).contains("Missing required column: timestamp");
+    }
+
+    @Test
+    @DisplayName("Should auto-detect and process unified forensic evidence CSV schema")
+    void testProcessUnifiedForensicSchema() {
+        String csv = """
+                id,timestamp,source,event_type,user,ip_address,device,success,bytes,description
+                L001,2026-11-09 08:15:00,Login CSV,LOGIN,alice,10.10.10.21,WS-01,true,0,Normal morning login
+                B001,2026-11-09 09:10:00,Browser CSV,BROWSER_VISIT,alice,10.10.10.21,WS-01,true,1200,Visited internal portal
+                S001,2026-11-09 10:00:00,System Log,FILE_ACCESS,alice,10.10.10.21,WS-01,true,4500,Opened finance document
+                N001,2026-11-09 11:00:00,Network CSV,NETWORK_TRANSFER,alice,10.10.10.21,WS-01,true,12000,Normal outbound transfer
+                """;
+
+        EvidenceProcessingResponse response = processingService.processEvidenceContent(
+                "case-2026",
+                "ev-unified",
+                EvidenceFileType.AUTO_DETECT,
+                csv
+        );
+
+        assertThat(response.getValidEventsCount()).isEqualTo(4);
+        assertThat(response.getErrorCount()).isEqualTo(0);
+        assertThat(response.getEvents().get(0).getEventType()).isEqualTo(EventType.LOGIN);
+        assertThat(response.getEvents().get(1).getEventType()).isEqualTo(EventType.BROWSER_ACTIVITY);
+        assertThat(response.getEvents().get(2).getEventType()).isEqualTo(EventType.FILE_ACCESS);
+        assertThat(response.getEvents().get(3).getEventType()).isEqualTo(EventType.NETWORK_EVENT);
     }
 }

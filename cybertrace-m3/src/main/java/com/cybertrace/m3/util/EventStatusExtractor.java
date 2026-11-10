@@ -41,10 +41,13 @@ public final class EventStatusExtractor {
         }
 
         String statusPart = trimmed.substring(prefixIndex + LOGIN_ATTEMPT_PREFIX.length()).trim();
+        while (statusPart.endsWith(")") || statusPart.endsWith("]") || statusPart.endsWith(".") || statusPart.endsWith(",")) {
+            statusPart = statusPart.substring(0, statusPart.length() - 1).trim();
+        }
 
-        if ("SUCCESS".equalsIgnoreCase(statusPart)) {
+        if ("SUCCESS".equalsIgnoreCase(statusPart) || statusPart.toUpperCase().startsWith("SUCCESS")) {
             return LoginStatus.SUCCESS;
-        } else if ("FAILED".equalsIgnoreCase(statusPart)) {
+        } else if ("FAILED".equalsIgnoreCase(statusPart) || "FAILURE".equalsIgnoreCase(statusPart) || statusPart.toUpperCase().startsWith("FAIL")) {
             return LoginStatus.FAILED;
         }
 

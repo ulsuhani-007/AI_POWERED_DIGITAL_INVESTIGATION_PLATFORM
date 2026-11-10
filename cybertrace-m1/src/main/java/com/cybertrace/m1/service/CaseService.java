@@ -133,6 +133,14 @@ public class CaseService {
         log.info("Deleted investigation case {} ({})", entity.getCaseNumber(), entity.getId());
     }
 
+    public CaseEntity updateCaseStatus(String id, CaseStatus status) {
+        CaseEntity entity = findEntityById(id);
+        entity.setStatus(status);
+        CaseEntity saved = caseRepository.save(entity);
+        log.info("Updated status for case {} ({}) to {}", saved.getCaseNumber(), saved.getId(), status);
+        return saved;
+    }
+
     @Transactional(readOnly = true)
     public CaseEntity findEntityById(String id) {
         if (id == null || id.isBlank()) {

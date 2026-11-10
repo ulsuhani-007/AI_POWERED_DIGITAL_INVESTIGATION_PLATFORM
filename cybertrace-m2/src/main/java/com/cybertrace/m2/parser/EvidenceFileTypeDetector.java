@@ -74,7 +74,7 @@ public class EvidenceFileTypeDetector {
 
         throw new InvalidEvidenceFileException(
                 "Unable to auto-detect evidence file type. Headers: " + normalizedHeaders +
-                        " do not match any known schema (LOGIN, BROWSER, FILE_ACCESS, NETWORK)"
+                        " do not match any known schema (LOGIN, BROWSER, FILE_ACCESS, NETWORK, UNIFIED)"
         );
     }
 

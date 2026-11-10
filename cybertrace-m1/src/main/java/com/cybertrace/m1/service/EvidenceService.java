@@ -199,6 +199,9 @@ public class EvidenceService {
             savedEvidence = evidenceRepository.save(savedEvidence);
             securityAuditService.logEvidenceProcessed(savedEvidence.getId(), normalizedEvents.size(), "PROCESSED");
 
+            // Advance case status to IN_PROGRESS as evidence has been ingested and normalized
+            caseService.updateCaseStatus(caseId, com.cybertrace.m1.entity.enums.CaseStatus.IN_PROGRESS);
+
             // 9. Trigger M3 Analysis with all cumulative case events
             try {
                 List<NormalizedEventDTO> allCaseEvents = eventService.getEventsByCase(caseId);

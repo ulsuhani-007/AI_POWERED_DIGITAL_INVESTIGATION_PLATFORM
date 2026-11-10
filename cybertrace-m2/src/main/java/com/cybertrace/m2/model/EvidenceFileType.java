@@ -8,5 +8,6 @@ public enum EvidenceFileType {
     BROWSER,
     FILE_ACCESS,
     NETWORK,
+    UNIFIED,
     AUTO_DETECT
 }
